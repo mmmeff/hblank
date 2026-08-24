@@ -17,10 +17,10 @@ zed-gpui = ["dep:gpui-zed", "dep:gpui-platform-zed"]
 gpui-crates-io = { package = "gpui", version = "0.2.2", optional = true }
 gpui-zed = { package = "gpui", git = "https://github.com/zed-industries/zed", rev = "d9ad6aff67e47de43abb270d22de75dd950f1b48", optional = true }
 gpui-platform-zed = { package = "gpui_platform", git = "https://github.com/zed-industries/zed", rev = "d9ad6aff67e47de43abb270d22de75dd950f1b48", features = ["font-kit", "wayland", "x11"], optional = true }
+hblank-core = { path = "../hblank-core", version = "0.2.0" }
 hblank-macros = { path = "../hblank-macros", version = "0.2.0" }
 inventory.workspace = true
 serde.workspace = true
-thiserror.workspace = true
 toml.workspace = true
 
 [lints]

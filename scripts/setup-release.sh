@@ -257,7 +257,13 @@ if [[ -z "$initial_run_id" ]]; then
   exit 1
 fi
 gh run watch "$initial_run_id" --repo "$REPOSITORY" --exit-status
-say "The hblank-macros, hblank, and hblank-cli 0.1.0 crates should now exist."
+say "The hblank-core, hblank-macros, hblank, and hblank-cli 0.1.0 crates should now exist."
+
+stage "Trust hblank-core workflow"
+open_url "https://crates.io/crates/hblank-core/settings"
+step "Open Trusted Publishers and add a GitHub Actions publisher."
+step "Owner: mmmeff; repository: hblank; workflow: release.yml; environment: leave blank."
+pause "Press Enter after the hblank-core publisher is saved."
 
 stage "Trust hblank-macros workflow"
 open_url "https://crates.io/crates/hblank-macros/settings"
@@ -289,7 +295,7 @@ fi
 gh run watch "$verification_run_id" --repo "$REPOSITORY" --exit-status
 verification_log="$(gh run view "$verification_run_id" --repo "$REPOSITORY" --log)"
 if [[ "$verification_log" != *"Using a short-lived crates.io trusted-publishing token"* ]]; then
-  warn "The workflow used the bootstrap token. Recheck all three Trusted Publisher entries before deleting it."
+  warn "The workflow used the bootstrap token. Recheck all four Trusted Publisher entries before deleting it."
   exit 1
 fi
 if confirm "Delete the CARGO_REGISTRY_TOKEN bootstrap secret now?"; then

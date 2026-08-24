@@ -35,29 +35,39 @@ function setWorkspaceVersion(contents) {
   return contents.replace(sectionPattern, `$1${version}$2`);
 }
 
-function macroDependencyVersion(contents) {
-  const dependency = contents.match(
-    /^hblank-macros\s*=\s*\{[^\n}]*\bversion\s*=\s*"([^"]+)"[^\n}]*\}\s*$/m,
+const runtimeDependencies = ["hblank-core", "hblank-macros"];
+
+function dependencyPattern(name, captureVersion) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const value = captureVersion ? '([^"]+)' : '[^"]+';
+  return new RegExp(
+    `(^${escaped}\\s*=\\s*\\{[^\\n}]*\\bversion\\s*=\\s*")${value}("[^\\n}]*\\}\\s*$)`,
+    "m",
   );
-  if (!dependency) {
-    throw new Error("hblank dependency on hblank-macros has no string version");
-  }
-  return dependency[1];
 }
 
-function setMacroDependencyVersion(contents) {
-  const dependencyPattern =
-    /(^hblank-macros\s*=\s*\{[^\n}]*\bversion\s*=\s*")[^"]+("[^\n}]*\}\s*$)/m;
-  if (!dependencyPattern.test(contents)) {
-    throw new Error("cannot update hblank-macros dependency version");
+function dependencyVersion(contents, name) {
+  const dependency = contents.match(dependencyPattern(name, true));
+  if (!dependency) {
+    throw new Error(`hblank dependency on ${name} has no string version`);
   }
-  return contents.replace(dependencyPattern, `$1${version}$2`);
+  return dependency[2];
+}
+
+function setDependencyVersion(contents, name) {
+  const pattern = dependencyPattern(name, false);
+  if (!pattern.test(contents)) {
+    throw new Error(`cannot update ${name} dependency version`);
+  }
+  return contents.replace(pattern, `$1${version}$2`);
 }
 
 const rootContents = readFileSync(rootManifest, "utf8");
 const runtimeContents = readFileSync(runtimeManifest, "utf8");
 const currentWorkspaceVersion = workspaceVersion(rootContents);
-const currentMacroVersion = macroDependencyVersion(runtimeContents);
+const currentDependencyVersions = new Map(
+  runtimeDependencies.map((name) => [name, dependencyVersion(runtimeContents, name)]),
+);
 
 if (mode === "check") {
   const mismatches = [];
@@ -66,10 +76,10 @@ if (mode === "check") {
       `workspace version is ${currentWorkspaceVersion}, expected ${version}`,
     );
   }
-  if (currentMacroVersion !== version) {
-    mismatches.push(
-      `hblank-macros dependency is ${currentMacroVersion}, expected ${version}`,
-    );
+  for (const [name, current] of currentDependencyVersions) {
+    if (current !== version) {
+      mismatches.push(`${name} dependency is ${current}, expected ${version}`);
+    }
   }
   if (mismatches.length > 0) {
     for (const mismatch of mismatches) console.error(mismatch);
@@ -80,7 +90,10 @@ if (mode === "check") {
 }
 
 const nextRootContents = setWorkspaceVersion(rootContents);
-const nextRuntimeContents = setMacroDependencyVersion(runtimeContents);
+const nextRuntimeContents = runtimeDependencies.reduce(
+  (contents, name) => setDependencyVersion(contents, name),
+  runtimeContents,
+);
 
 if (nextRootContents !== rootContents) {
   writeFileSync(rootManifest, nextRootContents);
@@ -90,5 +103,5 @@ if (nextRuntimeContents !== runtimeContents) {
 }
 
 console.log(
-  `release manifests: ${currentWorkspaceVersion}/${currentMacroVersion} -> ${version}`,
+  `release manifests: ${currentWorkspaceVersion}/${[...currentDependencyVersions.values()].join("/")} -> ${version}`,
 );

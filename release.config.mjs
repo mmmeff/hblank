@@ -21,6 +21,7 @@ export default {
           "CHANGELOG.md",
           "Cargo.lock",
           "Cargo.toml",
+          "crates/hblank-core/Cargo.toml",
           "crates/hblank/Cargo.toml",
         ],
         message:

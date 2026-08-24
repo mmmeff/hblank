@@ -2,6 +2,7 @@
 members = [
     "crates/hblank",
     "crates/hblank-cli",
+    "crates/hblank-core",
     "crates/hblank-macros",
     "fixtures/dogfood",
 ]

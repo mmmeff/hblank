@@ -15,7 +15,7 @@ use crate::gpui::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{ControlValue, FixtureDefinition, registered_catalog};
+use crate::{ControlValue, FixtureDefinition, registered_catalog, render_fixture};
 
 use super::components::{
     CanvasProps, ControlAction, ControlsPanelProps, DocsPanelProps, EmptyStateProps, HeaderProps,
@@ -385,7 +385,7 @@ impl HarnessApp {
             .into_any_element();
         };
         let metadata = self.fixtures[index].metadata();
-        let preview = self.fixtures[index].render(window, cx);
+        let preview = render_fixture(&self.fixtures[index], window, cx);
         let toolbar_surface = toolbar(
             ToolbarProps {
                 title: metadata.title.into(),

@@ -59,6 +59,10 @@ To inspect the published skill before installing:
 npx skills add mmmeff/hblank --list
 ```
 
+## Framework adapters
+
+`hblank-core` contains the framework-neutral props, controls, component metadata, fixture variants, canonical identity, and catalog assembly model. It has no GPUI dependency. The `hblank` crate is the GPUI adapter: it supplies GPUI render functions, inventory discovery, the desktop harness, and the authoring macros' runtime target. Additional UI-framework adapters can reuse the same core model without importing GPUI.
+
 ## Add Hblank to a GPUI project
 
 Until the crates are published, install from a local checkout:

@@ -1,0 +1,373 @@
+use std::{
+    any::TypeId,
+    collections::{HashMap, HashSet},
+    env,
+    path::Path,
+};
+
+use thiserror::Error;
+
+use crate::{ControlError, ControlValue, HblankProps};
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ComponentMetadata {
+    pub id: String,
+    pub title: &'static str,
+    pub group: &'static str,
+    pub docs: &'static str,
+    pub source: &'static str,
+    pub line: u32,
+}
+
+pub struct ComponentDefinition<Renderer> {
+    metadata: ComponentMetadata,
+    props_type: TypeId,
+    renderer: Renderer,
+}
+
+impl<Renderer> ComponentDefinition<Renderer> {
+    #[must_use]
+    pub fn new<Props: HblankProps>(metadata: ComponentMetadata, renderer: Renderer) -> Self {
+        Self {
+            metadata,
+            props_type: TypeId::of::<Props>(),
+            renderer,
+        }
+    }
+
+    #[must_use]
+    pub const fn metadata(&self) -> &ComponentMetadata {
+        &self.metadata
+    }
+
+    #[must_use]
+    pub const fn renderer(&self) -> &Renderer {
+        &self.renderer
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FixtureMetadata {
+    pub id: String,
+    pub component_id: String,
+    pub component_title: &'static str,
+    pub group: &'static str,
+    pub title: &'static str,
+    pub docs: &'static str,
+    pub source: &'static str,
+    pub line: u32,
+}
+
+pub struct FixtureRegistrationMetadata {
+    pub id: String,
+    pub title: &'static str,
+    pub docs: &'static str,
+    pub source: &'static str,
+    pub line: u32,
+}
+
+pub struct FixtureDefinition<Renderer> {
+    metadata: FixtureMetadata,
+    defaults: Box<dyn HblankProps>,
+    props: Box<dyn HblankProps>,
+    renderer: Renderer,
+}
+
+impl<Renderer> FixtureDefinition<Renderer> {
+    fn new(metadata: FixtureMetadata, props: Box<dyn HblankProps>, renderer: Renderer) -> Self {
+        Self {
+            metadata,
+            defaults: props.clone(),
+            props,
+            renderer,
+        }
+    }
+
+    #[must_use]
+    pub const fn metadata(&self) -> &FixtureMetadata {
+        &self.metadata
+    }
+
+    #[must_use]
+    pub fn props(&self) -> &dyn HblankProps {
+        self.props.as_ref()
+    }
+
+    #[must_use]
+    pub const fn renderer(&self) -> &Renderer {
+        &self.renderer
+    }
+
+    /// Replaces one generated property control value.
+    ///
+    /// # Errors
+    /// Returns an error when the identifier or value is invalid for this fixture's props.
+    pub fn set_control(&mut self, id: &str, value: ControlValue) -> Result<(), ControlError> {
+        self.props.set_control(id, value)
+    }
+
+    pub fn reset(&mut self) {
+        self.props = self.defaults.clone();
+    }
+}
+
+pub struct RegisteredCatalog<Renderer> {
+    components: Vec<ComponentDefinition<Renderer>>,
+    fixtures: Vec<FixtureDefinition<Renderer>>,
+}
+
+impl<Renderer> RegisteredCatalog<Renderer> {
+    #[must_use]
+    pub fn components(&self) -> &[ComponentDefinition<Renderer>] {
+        &self.components
+    }
+
+    #[must_use]
+    pub fn fixtures(&self) -> &[FixtureDefinition<Renderer>] {
+        &self.fixtures
+    }
+
+    #[must_use]
+    pub fn into_parts(
+        self,
+    ) -> (
+        Vec<ComponentDefinition<Renderer>>,
+        Vec<FixtureDefinition<Renderer>>,
+    ) {
+        (self.components, self.fixtures)
+    }
+}
+
+pub struct FixtureRegistrationData {
+    metadata: FixtureRegistrationMetadata,
+    component_id: String,
+    defaults: Box<dyn HblankProps>,
+}
+
+impl FixtureRegistrationData {
+    #[must_use]
+    pub fn new(
+        metadata: FixtureRegistrationMetadata,
+        component_id: String,
+        defaults: Box<dyn HblankProps>,
+    ) -> Self {
+        Self {
+            metadata,
+            component_id,
+            defaults,
+        }
+    }
+}
+
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum RegistryError {
+    #[error("multiple components use the id '{0}'")]
+    DuplicateComponentId(String),
+    #[error("multiple fixtures use the id '{0}'")]
+    DuplicateFixtureId(String),
+    #[error("fixture '{fixture}' references unknown component '{component}'")]
+    UnknownComponent { fixture: String, component: String },
+    #[error("fixture '{fixture}' uses props that do not match component '{component}'")]
+    PropsTypeMismatch { fixture: String, component: String },
+}
+
+/// Joins framework adapter registrations into a deterministic component catalog.
+///
+/// # Errors
+/// Returns an error for duplicate identifiers, unknown components, or mismatched props types.
+pub fn assemble_catalog<Renderer: Copy>(
+    mut components: Vec<ComponentDefinition<Renderer>>,
+    registrations: Vec<FixtureRegistrationData>,
+) -> Result<RegisteredCatalog<Renderer>, RegistryError> {
+    components.sort_by(|left, right| {
+        let left = left.metadata();
+        let right = right.metadata();
+        (left.group, left.title, left.id.as_str()).cmp(&(
+            right.group,
+            right.title,
+            right.id.as_str(),
+        ))
+    });
+
+    let mut component_ids = HashSet::with_capacity(components.len());
+    for component in &components {
+        if !component_ids.insert(component.metadata.id.as_str()) {
+            return Err(RegistryError::DuplicateComponentId(
+                component.metadata.id.clone(),
+            ));
+        }
+    }
+    let component_indexes = components
+        .iter()
+        .enumerate()
+        .map(|(index, component)| (component.metadata.id.as_str(), index))
+        .collect::<HashMap<_, _>>();
+
+    let mut fixture_ids = HashSet::with_capacity(registrations.len());
+    let mut fixtures = Vec::with_capacity(registrations.len());
+    for registration in registrations {
+        if !fixture_ids.insert(registration.metadata.id.clone()) {
+            return Err(RegistryError::DuplicateFixtureId(registration.metadata.id));
+        }
+        let Some(&component_index) = component_indexes.get(registration.component_id.as_str())
+        else {
+            return Err(RegistryError::UnknownComponent {
+                fixture: registration.metadata.id,
+                component: registration.component_id,
+            });
+        };
+        let component = &components[component_index];
+        if registration.defaults.as_any().type_id() != component.props_type {
+            return Err(RegistryError::PropsTypeMismatch {
+                fixture: registration.metadata.id,
+                component: registration.component_id,
+            });
+        }
+        fixtures.push(FixtureDefinition::new(
+            FixtureMetadata {
+                id: registration.metadata.id,
+                component_id: component.metadata.id.clone(),
+                component_title: component.metadata.title,
+                group: component.metadata.group,
+                title: registration.metadata.title,
+                docs: registration.metadata.docs,
+                source: registration.metadata.source,
+                line: registration.metadata.line,
+            },
+            registration.defaults,
+            component.renderer,
+        ));
+    }
+    fixtures.sort_by(|left, right| {
+        let left = left.metadata();
+        let right = right.metadata();
+        (
+            left.group,
+            left.component_title,
+            left.title,
+            left.id.as_str(),
+        )
+            .cmp(&(
+                right.group,
+                right.component_title,
+                right.title,
+                right.id.as_str(),
+            ))
+    });
+
+    Ok(RegisteredCatalog {
+        components,
+        fixtures,
+    })
+}
+
+#[must_use]
+pub fn canonical_source_id(source: &str, symbol: &str) -> String {
+    let source = Path::new(source);
+    let project_root = env::var_os("HBLANK_PROJECT_ROOT")
+        .map(std::path::PathBuf::from)
+        .or_else(|| env::current_dir().ok());
+    let relative = project_root
+        .as_deref()
+        .and_then(|root| source.strip_prefix(root).ok())
+        .unwrap_or(source);
+    let portable = relative.to_string_lossy().replace('\\', "/");
+    format!("{portable}#{symbol}")
+}
+
+#[cfg(test)]
+mod tests {
+    use std::any::Any;
+
+    use super::*;
+    use crate::{ControlDefinition, ControlError, ControlValue};
+
+    #[derive(Clone)]
+    struct Props;
+
+    impl HblankProps for Props {
+        fn definitions(&self) -> &'static [ControlDefinition] {
+            &[]
+        }
+
+        fn control_value(&self, _id: &str) -> Option<ControlValue> {
+            None
+        }
+
+        fn set_control(&mut self, id: &str, _value: ControlValue) -> Result<(), ControlError> {
+            Err(ControlError::UnknownControl(id.to_owned()))
+        }
+
+        fn clone_box(&self) -> Box<dyn HblankProps> {
+            Box::new(self.clone())
+        }
+
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+    }
+
+    fn component() -> ComponentDefinition<&'static str> {
+        ComponentDefinition::new::<Props>(
+            ComponentMetadata {
+                id: "src/card.rs#card".to_owned(),
+                title: "Card",
+                group: "Components",
+                docs: "A card.",
+                source: "src/card.rs",
+                line: 10,
+            },
+            "framework renderer",
+        )
+    }
+
+    fn fixture(component_id: &str) -> FixtureRegistrationData {
+        FixtureRegistrationData::new(
+            FixtureRegistrationMetadata {
+                id: "src/card.rs#default".to_owned(),
+                title: "Default",
+                docs: "",
+                source: "src/card.rs",
+                line: 20,
+            },
+            component_id.to_owned(),
+            Box::new(Props),
+        )
+    }
+
+    #[test]
+    fn assembles_catalog_without_framework_types() {
+        let catalog = assemble_catalog(vec![component()], vec![fixture("src/card.rs#card")])
+            .expect("framework-neutral registrations should assemble");
+
+        assert_eq!(catalog.components().len(), 1);
+        assert_eq!(catalog.fixtures().len(), 1);
+        assert_eq!(catalog.fixtures()[0].renderer(), &"framework renderer");
+        assert_eq!(catalog.fixtures()[0].metadata().component_title, "Card");
+    }
+
+    #[test]
+    fn rejects_unknown_framework_component_references() {
+        let Err(error) =
+            assemble_catalog::<&str>(Vec::new(), vec![fixture("src/missing.rs#missing")])
+        else {
+            panic!("unknown component should fail");
+        };
+
+        assert_eq!(
+            error,
+            RegistryError::UnknownComponent {
+                fixture: "src/card.rs#default".to_owned(),
+                component: "src/missing.rs#missing".to_owned(),
+            }
+        );
+    }
+
+    #[test]
+    fn builds_portable_source_symbol_ids() {
+        assert_eq!(
+            canonical_source_id("src/card.hblank.rs", "default"),
+            "src/card.hblank.rs#default"
+        );
+    }
+}

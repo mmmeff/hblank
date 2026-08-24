@@ -14,7 +14,7 @@ if [[ -n "$mode" && "$mode" != "--dry-run" ]]; then
   exit 2
 fi
 
-crates=(hblank-macros hblank hblank-cli)
+crates=(hblank-core hblank-macros hblank hblank-cli)
 node scripts/release-version.mjs check "$version"
 
 if [[ "$mode" == "--dry-run" ]]; then
