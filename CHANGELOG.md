@@ -1,3 +1,13 @@
+## [0.4.2](https://github.com/mmmeff/hblank/compare/v0.4.1...v0.4.2) (2026-08-24)
+
+
+### Bug Fixes
+
+* **release:** authorize GitHub release recovery ([459a5ca](https://github.com/mmmeff/hblank/commit/459a5caf1e39255da6b9775333799d5f347486b8))
+* **release:** create releases from existing tags ([04d9b66](https://github.com/mmmeff/hblank/commit/04d9b66652b0c9f930b6919138bb99cec7c04152))
+* **release:** recover missing GitHub releases ([4d94836](https://github.com/mmmeff/hblank/commit/4d948361a03927cd58cf6cc65e8b9de9041216e7))
+* **release:** surface GitHub release errors ([f3ce311](https://github.com/mmmeff/hblank/commit/f3ce31167e8dc97eff942e43dcd9e2167119d25c))
+
 ## [0.4.1](https://github.com/mmmeff/hblank/compare/v0.4.0...v0.4.1) (2026-08-24)
 
 
