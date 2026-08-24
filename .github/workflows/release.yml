@@ -52,6 +52,13 @@ jobs:
           rustup default stable
           rustup component add rustfmt
 
+      - name: Install GPUI Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            libx11-xcb-dev \
+            libxkbcommon-x11-dev
+
       - name: Verify workspace
         run: |
           cargo fmt --all -- --check
