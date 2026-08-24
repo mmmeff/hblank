@@ -36,7 +36,9 @@ The job:
 9. publishes missing GitHub Releases for fully indexed crate versions
 10. runs semantic-release
 
-GitHub must allow workflow write access. In repository Settings, open Actions, then General. Under Workflow permissions, select `Read and write permissions`. The workflow uses the built-in `GITHUB_TOKEN` to create releases.
+GitHub must allow workflow write access. In repository Settings, open Actions, then General. Under Workflow permissions, select `Read and write permissions`. The workflow uses `GH_RELEASE_TOKEN` when it is set. Otherwise, it uses the built-in `GITHUB_TOKEN`.
+
+If the built-in token returns `Resource not accessible by integration` when it creates a GitHub Release, create a fine-grained token scoped only to `mmmeff/hblank` with Contents `Read and write`. Save it as the `GH_RELEASE_TOKEN` repository secret.
 
 Semantic-release then:
 
@@ -101,16 +103,17 @@ Run the interactive setup wizard from the repository root:
 scripts/setup-release.sh
 ```
 
-The wizard has eight stages:
+The wizard has nine stages:
 
 1. create a temporary crates.io token with publish-new and publish-update permissions
 2. save it as the `CARGO_REGISTRY_TOKEN` GitHub secret
 3. allow GitHub Actions workflows to write repository contents
-4. create or verify the `v0.0.0` baseline tag
-5. dispatch the first automated release
-6. add `release.yml` as a Trusted Publisher for each of the four crates
-7. delete the bootstrap secret
-8. dispatch a verification run that must use a short-lived token
+4. create a GitHub release token with Contents read and write
+5. create or verify the `v0.0.0` baseline tag
+6. dispatch the first automated release
+7. add `release.yml` as a Trusted Publisher for each of the four crates
+8. delete the bootstrap secret
+9. dispatch a verification run that must use a short-lived token
 
 The wizard requires an authenticated GitHub CLI and checks that it is running in `mmmeff/hblank`.
 

@@ -184,7 +184,7 @@ finish() {
 # Replace the example below. Set TOTAL_STAGES to match the stages you write.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=8
+TOTAL_STAGES=9
 REPOSITORY="mmmeff/hblank"
 WORKFLOW="release.yml"
 
@@ -223,6 +223,23 @@ open_url "https://github.com/$REPOSITORY/settings/actions"
 step "Under Workflow permissions, select Read and write permissions."
 step "Save the change."
 pause "Press Enter after the permission is saved."
+
+stage "Authorize GitHub release publishing"
+open_url "https://github.com/settings/personal-access-tokens/new"
+step "Create a fine-grained token scoped only to the hblank repository."
+step "Set Contents permission to Read and write."
+ask_secret GITHUB_RELEASE_TOKEN "Paste the GitHub release token:"
+if [[ -z "$GITHUB_RELEASE_TOKEN" ]]; then
+  warn "The GitHub release token cannot be empty."
+  exit 1
+fi
+set_secret GH_RELEASE_TOKEN "$GITHUB_RELEASE_TOKEN"
+unset GITHUB_RELEASE_TOKEN
+if [[ "$(gh secret list --repo "$REPOSITORY" --json name --jq 'any(.name == "GH_RELEASE_TOKEN")')" != "true" ]]; then
+  warn "GitHub secret GH_RELEASE_TOKEN was not created."
+  exit 1
+fi
+note "GitHub secret GH_RELEASE_TOKEN is ready."
 
 stage "Pre-1.0 baseline tag"
 say "semantic-release starts at 1.0.0 without history. A v0.0.0 tag on the root commit makes the existing feat commit release 0.1.0."

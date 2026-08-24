@@ -108,7 +108,7 @@ jobs:
 
       - name: Publish missing GitHub releases
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           output_file="$(mktemp)"
           if ! bash scripts/publish-github-releases.sh >"$output_file" 2>&1; then
@@ -121,5 +121,5 @@ jobs:
 
       - name: Run semantic-release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
         run: npm run release
