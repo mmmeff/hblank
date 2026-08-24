@@ -1,0 +1,15 @@
+[package]
+name = "hblank-dogfood"
+description = "Hblank's dogfooding GPUI fixture"
+publish = false
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+gpui.workspace = true
+hblank = { path = "../../crates/hblank" }
+
+[lints]
+workspace = true

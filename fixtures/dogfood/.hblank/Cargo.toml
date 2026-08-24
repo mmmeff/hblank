@@ -1,0 +1,11 @@
+[package]
+name = "hblank-dogfood-hblank-preview"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+hblank = { path = "../../../crates/hblank" }
+hblank_project = { package = "hblank-dogfood", path = ".." }

@@ -1,0 +1,10 @@
+examples = ["src/**/*.hblank.rs"]
+ignore = [
+    "target/**",
+    ".hblank/**",
+]
+
+[window]
+title = "hblank-dogfood · Hblank"
+width = 1440
+height = 900
