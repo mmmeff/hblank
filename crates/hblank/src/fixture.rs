@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use gpui::{AnyElement, App, Window};
+use crate::gpui::{AnyElement, App, Window};
 use thiserror::Error;
 
 use crate::{ControlError, ControlValue, HblankProps};

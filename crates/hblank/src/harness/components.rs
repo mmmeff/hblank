@@ -2,7 +2,8 @@
 
 use std::rc::Rc;
 
-use gpui::{
+use crate::gpui;
+use crate::gpui::{
     AnyElement, App, Div, FontWeight, SharedString, Window, div, prelude::*, px, rems, rgb,
 };
 

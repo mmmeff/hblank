@@ -6,9 +6,12 @@ use std::{
     rc::Rc,
 };
 
-use gpui::{
-    App, Application, Bounds, Context, FocusHandle, IntoElement, KeyDownEvent, Modifiers, Render,
-    SharedString, Window, WindowBounds, WindowOptions, div, prelude::*, px, rems, rgb, size,
+use crate::gpui;
+#[cfg(feature = "crates-io-gpui")]
+use crate::gpui::Application;
+use crate::gpui::{
+    App, Bounds, Context, FocusHandle, IntoElement, KeyDownEvent, Modifiers, Render, SharedString,
+    Window, WindowBounds, WindowOptions, div, prelude::*, px, rems, rgb, size,
 };
 use serde::{Deserialize, Serialize};
 
@@ -29,6 +32,15 @@ const UI_SCALE_STEP: f32 = 0.1;
 const MIN_UI_SCALE: f32 = 0.5;
 const MAX_UI_SCALE: f32 = 2.0;
 
+fn focus(handle: &FocusHandle, window: &mut Window, cx: &mut App) {
+    #[cfg(feature = "zed-gpui")]
+    handle.focus(window, cx);
+    #[cfg(feature = "crates-io-gpui")]
+    {
+        let _ = cx;
+        handle.focus(window);
+    }
+}
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 struct PersistedState {
@@ -122,7 +134,7 @@ impl HarnessApp {
             })
             .collect::<Vec<_>>();
         let focus_handle = cx.focus_handle();
-        focus_handle.focus(window);
+        focus(&focus_handle, window, cx);
         println!("Hblank harness ready: {} fixtures", fixtures.len());
 
         let app = Self {
@@ -220,7 +232,7 @@ impl HarnessApp {
     #[allow(clippy::trivially_copy_pass_by_ref)]
     fn on_search_focus(&mut self, _: &SearchAction, window: &mut Window, cx: &mut Context<Self>) {
         self.editing = EditingTarget::Search;
-        self.focus_handle.focus(window);
+        focus(&self.focus_handle, window, cx);
         cx.notify();
     }
 
@@ -247,7 +259,7 @@ impl HarnessApp {
             }
             ControlAction::EditText { id } => {
                 self.editing = EditingTarget::TextControl(id);
-                self.focus_handle.focus(window);
+                focus(&self.focus_handle, window, cx);
             }
             ControlAction::Reset => {
                 if let Some(fixture) = self.selected_fixture_mut() {
@@ -489,8 +501,21 @@ impl Render for HarnessApp {
 }
 
 pub fn run_harness() {
-    Application::new().run(|cx: &mut App| {
+    #[cfg(feature = "crates-io-gpui")]
+    let application = Application::new();
+    #[cfg(feature = "zed-gpui")]
+    let application = gpui_platform_zed::application();
+
+    application.run(|cx: &mut App| {
+        #[cfg(feature = "crates-io-gpui")]
         cx.on_window_closed(|cx| {
+            if cx.windows().is_empty() {
+                cx.quit();
+            }
+        })
+        .detach();
+        #[cfg(feature = "zed-gpui")]
+        cx.on_window_closed(|cx, _| {
             if cx.windows().is_empty() {
                 cx.quit();
             }
@@ -552,7 +577,7 @@ fn env_dimension(name: &str, fallback: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use gpui::Modifiers;
+    use crate::gpui::Modifiers;
 
     use super::{
         MAX_UI_SCALE, MIN_UI_SCALE, PersistedState, UI_SCALE_STEP, bounded_ui_scale, env_dimension,
