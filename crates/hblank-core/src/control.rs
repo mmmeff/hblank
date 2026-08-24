@@ -8,6 +8,7 @@
 
 use std::any::Any;
 
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -73,7 +74,7 @@ impl ControlKind {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum ControlValue {
     Boolean(bool),
     Text(String),

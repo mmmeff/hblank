@@ -3428,6 +3428,7 @@ dependencies = [
 name = "hblank-core"
 version = "0.2.0"
 dependencies = [
+ "serde",
  "thiserror 2.0.20",
 ]
 

@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
     process::{Child, Command, ExitStatus, Stdio},
     sync::mpsc,
-    time::Duration,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use notify::{RecursiveMode, Watcher};
@@ -17,6 +17,14 @@ use crate::{
 
 const DEBOUNCE: Duration = Duration::from_millis(160);
 const IDLE_POLL: Duration = Duration::from_millis(250);
+
+fn dev_session_id() -> String {
+    let started = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    format!("{}-{started}", std::process::id())
+}
 
 #[derive(Clone, Debug)]
 pub struct DevOptions {
@@ -62,6 +70,7 @@ pub fn run_dev(options: &DevOptions) -> Result<(), DevError> {
         .map(|path| resolve_initial_fixture(&project_root, path, &initial.fixture_files))
         .transpose()?;
     let mut fingerprint = source_fingerprint(&project_root)?;
+    let session_id = dev_session_id();
     println!(
         "Discovered {} Hblank fixture files",
         initial.fixture_files.len()
@@ -70,7 +79,8 @@ pub fn run_dev(options: &DevOptions) -> Result<(), DevError> {
         println!("Opening fixture {}", fixture.display());
     }
 
-    let mut preview = PreviewProcess::build_and_start(&project_root, &config, fixture.as_deref())?;
+    let mut preview =
+        PreviewProcess::build_and_start(&project_root, &config, fixture.as_deref(), &session_id)?;
     let (sender, receiver) = mpsc::channel();
     let mut watcher = notify::recommended_watcher(sender).map_err(DevError::Watcher)?;
     watcher
@@ -107,7 +117,7 @@ pub fn run_dev(options: &DevOptions) -> Result<(), DevError> {
                         }
                     }
                 }
-                match rebuild(&project_root, &config, &mut preview) {
+                match rebuild(&project_root, &config, &session_id, &mut preview) {
                     Ok(count) => println!("Reloaded {count} Hblank fixture files"),
                     Err(error) => {
                         eprintln!("Hblank rebuild failed; keeping the current preview: {error}");
@@ -154,11 +164,12 @@ fn resolve_initial_fixture(
 fn rebuild(
     project_root: &Path,
     config: &Config,
+    session_id: &str,
     preview: &mut PreviewProcess,
 ) -> Result<usize, DevError> {
     let generated = refresh_generated_fixtures(project_root, config)?;
     build_preview(project_root)?;
-    let replacement = spawn_preview(project_root, config, None)?;
+    let replacement = spawn_preview(project_root, config, None, session_id)?;
     preview.replace(replacement)?;
     Ok(generated.fixture_files.len())
 }
@@ -209,9 +220,10 @@ impl PreviewProcess {
         project_root: &Path,
         config: &Config,
         fixture: Option<&Path>,
+        session_id: &str,
     ) -> Result<Self, DevError> {
         build_preview(project_root)?;
-        let child = spawn_preview(project_root, config, fixture)?;
+        let child = spawn_preview(project_root, config, fixture, session_id)?;
         Ok(Self { child })
     }
 
@@ -266,6 +278,7 @@ fn spawn_preview(
     project_root: &Path,
     config: &Config,
     fixture: Option<&Path>,
+    session_id: &str,
 ) -> Result<Child, DevError> {
     let binary_name = preview_package_name(project_root)?;
     let mut binary = project_root.join(".hblank/target/debug").join(binary_name);
@@ -278,6 +291,7 @@ fn spawn_preview(
         .env("HBLANK_WINDOW_TITLE", &config.window.title)
         .env("HBLANK_WINDOW_WIDTH", config.window.width.to_string())
         .env("HBLANK_WINDOW_HEIGHT", config.window.height.to_string())
+        .env("HBLANK_SESSION_ID", session_id)
         .stdin(Stdio::null());
     if let Some(fixture) = fixture {
         command.env("HBLANK_INITIAL_FIXTURE", fixture);

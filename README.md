@@ -233,7 +233,7 @@ While it runs:
 
 - adding or removing a matching fixture file refreshes navigation;
 - changing component or fixture Rust code triggers a debounced rebuild;
-- a successful build automatically replaces the preview process and restores the selected fixture;
+- a successful build automatically replaces the preview process and restores both the selected fixture and non-default control values from the current `hblank dev` session; a new command starts from source-defined defaults;
 - a failed build leaves the last successful harness open and prints the compiler failure;
 - `↑` and `↓` move through filtered fixtures, and `Esc` clears the filter.
 - `Cmd` + `=` or `+` zooms in and `Cmd` + `-` zooms out (`Super` on Linux, `Win` on Windows).

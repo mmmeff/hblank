@@ -92,10 +92,27 @@ impl<Renderer> FixtureDefinition<Renderer> {
     pub fn props(&self) -> &dyn HblankProps {
         self.props.as_ref()
     }
-
     #[must_use]
     pub const fn renderer(&self) -> &Renderer {
         &self.renderer
+    }
+
+    #[must_use]
+    pub fn default_control_value(&self, id: &str) -> Option<ControlValue> {
+        self.defaults.control_value(id)
+    }
+
+    /// Applies valid control values and ignores stale or invalid entries.
+    ///
+    /// Returns the number of values accepted by this fixture.
+    pub fn apply_control_values<'a>(
+        &mut self,
+        values: impl IntoIterator<Item = (&'a str, &'a ControlValue)>,
+    ) -> usize {
+        values
+            .into_iter()
+            .filter(|(id, value)| self.set_control(id, (*value).clone()).is_ok())
+            .count()
     }
 
     /// Replaces one generated property control value.
@@ -280,22 +297,40 @@ mod tests {
     use std::any::Any;
 
     use super::*;
-    use crate::{ControlDefinition, ControlError, ControlValue};
+    use crate::{ControlDefinition, ControlError, ControlKind, ControlValue};
 
     #[derive(Clone)]
-    struct Props;
+    struct Props {
+        active: bool,
+    }
 
     impl HblankProps for Props {
         fn definitions(&self) -> &'static [ControlDefinition] {
-            &[]
+            &[ControlDefinition {
+                id: "active",
+                label: "Active",
+                docs: "",
+                kind: ControlKind::Boolean,
+            }]
         }
 
-        fn control_value(&self, _id: &str) -> Option<ControlValue> {
-            None
+        fn control_value(&self, id: &str) -> Option<ControlValue> {
+            (id == "active").then_some(ControlValue::Boolean(self.active))
         }
 
-        fn set_control(&mut self, id: &str, _value: ControlValue) -> Result<(), ControlError> {
-            Err(ControlError::UnknownControl(id.to_owned()))
+        fn set_control(&mut self, id: &str, value: ControlValue) -> Result<(), ControlError> {
+            if id != "active" {
+                return Err(ControlError::UnknownControl(id.to_owned()));
+            }
+            let ControlValue::Boolean(value) = value else {
+                return Err(ControlError::TypeMismatch {
+                    control: "active",
+                    expected: "boolean",
+                    actual: value.kind_name(),
+                });
+            };
+            self.active = value;
+            Ok(())
         }
 
         fn clone_box(&self) -> Box<dyn HblankProps> {
@@ -331,7 +366,7 @@ mod tests {
                 line: 20,
             },
             component_id.to_owned(),
-            Box::new(Props),
+            Box::new(Props { active: false }),
         )
     }
 
@@ -360,6 +395,26 @@ mod tests {
                 fixture: "src/card.rs#default".to_owned(),
                 component: "src/missing.rs#missing".to_owned(),
             }
+        );
+    }
+
+    #[test]
+    fn reapplies_only_valid_session_control_values() {
+        let catalog = assemble_catalog(vec![component()], vec![fixture("src/card.rs#card")])
+            .expect("catalog should assemble");
+        let fixture = &mut catalog.into_parts().1.remove(0);
+        let values = [
+            ("active", ControlValue::Boolean(true)),
+            ("stale", ControlValue::Text("ignored".to_owned())),
+        ];
+
+        assert_eq!(
+            fixture.apply_control_values(values.iter().map(|(id, value)| (*id, value))),
+            1
+        );
+        assert_eq!(
+            fixture.props().control_value("active"),
+            Some(ControlValue::Boolean(true))
         );
     }
 

@@ -1,6 +1,7 @@
 #![allow(clippy::unreadable_literal)] // Six-digit RGB values remain recognizable as design tokens.
 
 use std::{
+    collections::BTreeMap,
     env, fs,
     path::{Path, PathBuf},
     rc::Rc,
@@ -46,8 +47,10 @@ fn focus(handle: &FocusHandle, window: &mut Window, cx: &mut App) {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 struct PersistedState {
+    session: String,
     selected: Option<String>,
     filter: String,
+    controls: BTreeMap<String, BTreeMap<String, ControlValue>>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -69,6 +72,7 @@ struct HarnessApp {
     focus_handle: FocusHandle,
     project: SharedString,
     status: SharedString,
+    session: String,
     state_path: PathBuf,
 }
 
@@ -91,6 +95,18 @@ fn initial_selection<'a>(
     (persisted.or(first), false)
 }
 
+fn restore_control_overrides(
+    fixtures: &mut [FixtureDefinition],
+    controls: &BTreeMap<String, BTreeMap<String, ControlValue>>,
+) {
+    for fixture in fixtures {
+        let Some(values) = controls.get(fixture.metadata().id.as_str()) else {
+            continue;
+        };
+        fixture.apply_control_values(values.iter().map(|(id, value)| (id.as_str(), value)));
+    }
+}
+
 fn ui_scale_delta(key: &str, modifiers: Modifiers) -> Option<f32> {
     if !modifiers.platform || modifiers.control || modifiers.alt || modifiers.function {
         return None;
@@ -109,11 +125,18 @@ fn bounded_ui_scale(current: f32, delta: f32) -> f32 {
 impl HarnessApp {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let state_path = state_path();
-        let persisted = load_state(&state_path);
-        let (fixtures, mut status) = match registered_catalog() {
+        let mut persisted = load_state(&state_path);
+        let session = env::var("HBLANK_SESSION_ID")
+            .unwrap_or_else(|_| format!("process-{}", std::process::id()));
+        let (mut fixtures, mut status) = match registered_catalog() {
             Ok(catalog) => (catalog.into_parts().1, SharedString::from("Ready")),
             Err(error) => (Vec::new(), SharedString::from(error.to_string())),
         };
+        if persisted.session == session {
+            restore_control_overrides(&mut fixtures, &persisted.controls);
+        } else {
+            persisted.controls.clear();
+        }
         let requested_fixture = env::var("HBLANK_INITIAL_FIXTURE").ok();
         let (selected, matched_fixture) = initial_selection(
             fixtures.iter().map(|fixture| {
@@ -159,6 +182,7 @@ impl HarnessApp {
                 .unwrap_or_else(|_| "GPUI project · Hblank".to_owned())
                 .into(),
             status,
+            session,
             state_path,
         };
         if matched_fixture {
@@ -284,6 +308,7 @@ impl HarnessApp {
                 self.status = SharedString::from("Ready");
             }
         }
+        self.persist();
         cx.notify();
     }
 
@@ -431,9 +456,28 @@ impl HarnessApp {
     }
 
     fn persist(&self) {
+        let controls = self
+            .fixtures
+            .iter()
+            .filter_map(|fixture| {
+                let values = fixture
+                    .props()
+                    .definitions()
+                    .iter()
+                    .filter_map(|definition| {
+                        let current = fixture.props().control_value(definition.id)?;
+                        (fixture.default_control_value(definition.id) != Some(current.clone()))
+                            .then(|| (definition.id.to_owned(), current))
+                    })
+                    .collect::<BTreeMap<_, _>>();
+                (!values.is_empty()).then(|| (fixture.metadata().id.clone(), values))
+            })
+            .collect();
         let state = PersistedState {
+            session: self.session.clone(),
             selected: self.selected_id().map(str::to_owned),
             filter: self.filter.clone(),
+            controls,
         };
         let Ok(source) = toml::to_string(&state) else {
             return;
@@ -655,7 +699,9 @@ fn env_dimension(name: &str, fallback: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::gpui::Modifiers;
+    use std::collections::BTreeMap;
+
+    use crate::{ControlValue, gpui::Modifiers};
 
     use super::{
         MAX_UI_SCALE, MIN_UI_SCALE, PersistedState, UI_SCALE_STEP, bounded_ui_scale, env_dimension,
@@ -665,13 +711,20 @@ mod tests {
     #[test]
     fn persisted_state_round_trips() {
         let state = PersistedState {
+            session: "dev-session".to_owned(),
             selected: Some("components::button".to_owned()),
             filter: "button".to_owned(),
+            controls: BTreeMap::from([(
+                "src/button.hblank.rs#default".to_owned(),
+                BTreeMap::from([("label".to_owned(), ControlValue::Text("Saved".to_owned()))]),
+            )]),
         };
         let source = toml::to_string(&state).expect("state should serialize");
         let restored: PersistedState = toml::from_str(&source).expect("state should parse");
+        assert_eq!(restored.session, state.session);
         assert_eq!(restored.selected, state.selected);
         assert_eq!(restored.filter, state.filter);
+        assert_eq!(restored.controls, state.controls);
     }
 
     #[test]

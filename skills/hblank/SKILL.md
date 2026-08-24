@@ -134,7 +134,7 @@ hblank dev --project crates/ui --fixture src/badge.hblank.rs
 
 Relative fixture paths resolve from `--project`; absolute paths also work. The file must match configured discovery. If it contains multiple fixtures, the first in deterministic navigation order opens.
 
-Keep `hblank dev` running while editing. A successful build replaces the preview automatically and preserves the user's latest selection. A failed build leaves the last successful preview open; fix the compiler error rather than restarting repeatedly.
+Keep `hblank dev` running while editing. A successful build replaces the preview automatically and preserves the latest selection plus non-default control values for that command's session. Starting a new `hblank dev` intentionally returns controls to source-defined fixture defaults. A failed build leaves the last successful preview open; fix the compiler error rather than restarting repeatedly.
 
 **Complete when:** the actual GPUI window opens on the requested fixture and the selected id is visible in navigation.
 

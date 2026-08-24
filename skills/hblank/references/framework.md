@@ -70,7 +70,7 @@ The runtime joins components and variants, rejects duplicate canonical ids, unkn
 
 The GPUI harness owns selection, filtering, active inspector tab, editing target, and mutable fixture props. Presentational harness functions live separately under `hblank::harness`.
 
-Selection and filter persist in `.hblank/state.toml`. `hblank dev --fixture PATH` passes `HBLANK_INITIAL_FIXTURE` only to the first preview process. The harness gives that source path priority, clears an excluding filter, persists the resulting id, and then lets later reloads restore normal user state.
+Selection and filter persist in `.hblank/state.toml`. The CLI assigns one `HBLANK_SESSION_ID` to every preview process it supervises. Non-default control values are serialized by canonical fixture/control id and reapplied only when that session id matches, so successful rebuilds retain live work while a new `hblank dev` starts from source defaults. Stale or invalid values are ignored. `hblank dev --fixture PATH` still gives the requested source priority only for the first preview process.
 
 ## Reload lifecycle
 

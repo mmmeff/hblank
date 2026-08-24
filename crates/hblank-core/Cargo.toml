@@ -9,6 +9,7 @@ repository.workspace = true
 readme.workspace = true
 
 [dependencies]
+serde.workspace = true
 thiserror.workspace = true
 
 [lints]
