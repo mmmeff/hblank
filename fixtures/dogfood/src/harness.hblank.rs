@@ -8,7 +8,7 @@ use hblank::harness::{
     NavigationItem, NavigationProps, SearchProps, ToolbarProps, UiHandler, canvas, controls_panel,
     docs_panel, empty_state, header, navigation, search, toolbar,
 };
-use hblank::{HblankEnum, HblankProps};
+use hblank::{HblankEnum, HblankProps, ThemeMode};
 
 fn noop<T: 'static>() -> UiHandler<T> {
     Rc::new(|_, _, _| {})
@@ -184,6 +184,7 @@ fn toolbar_fixture(
                 FixtureTab::Controls => InspectorTab::Controls,
                 FixtureTab::Docs => InspectorTab::Docs,
             },
+            theme_mode: ThemeMode::System,
         },
         noop(),
     )

@@ -243,6 +243,33 @@ fn expand_component(
     })
 }
 
+#[proc_macro_attribute]
+pub fn theme_hook(args: TokenStream, input: TokenStream) -> TokenStream {
+    if !args.is_empty() {
+        return Error::new(
+            proc_macro2::Span::call_site(),
+            "Hblank theme hooks take no attributes",
+        )
+        .into_compile_error()
+        .into();
+    }
+    let function = parse_macro_input!(input as ItemFn);
+    let function_name = &function.sig.ident;
+    quote! {
+        #function
+
+        const _: ::hblank::ThemeHook = #function_name;
+
+        ::hblank::__private::inventory::submit! {
+            ::hblank::ThemeHookRegistration {
+                id: concat!(module_path!(), "::", stringify!(#function_name)),
+                apply: #function_name,
+            }
+        }
+    }
+    .into()
+}
+
 #[derive(Default)]
 struct FixtureArgs {
     component: Option<Path>,

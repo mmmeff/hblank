@@ -212,6 +212,8 @@ ignore = [
     "src/generated/**",
 ]
 
+theme_hook = "my_app::apply_hblank_theme"
+
 [window]
 title = "my-app · Hblank"
 width = 1440
@@ -219,6 +221,25 @@ height = 900
 ```
 
 Patterns are project-root-relative. Discovery order is deterministic, duplicate file names are safe, and generated module identifiers remain stable.
+
+## Light and dark themes
+
+The harness follows the OS appearance by default. The toolbar can override Light or Dark for the current `hblank dev` session. Without a configured project hook, the override affects Hblank chrome only.
+
+To switch the previewed project, annotate one narrow hook and name its Rust path in `.hblank/config.toml`:
+
+```rust
+#[hblank::theme_hook]
+pub fn apply_hblank_theme(
+    mode: hblank::ThemeMode,
+    resolved: hblank::ResolvedTheme,
+    cx: &mut hblank::gpui::App,
+) {
+    cx.set_global(ProjectTheme::from_hblank(mode, resolved));
+}
+```
+
+The hook receives both the selected System/Light/Dark mode and its resolved Light/Dark appearance. System mode observes live GPUI window-appearance changes.
 
 ## Development loop
 
@@ -282,4 +303,5 @@ After setup, releases require no crates.io secret in GitHub.
 ## Project status
 
 Hblank is pre-1.0 and currently targets GPUI `0.2.2`. The core workflow is implemented and dogfooded: initialization, glob discovery, typed controls, Rustdoc extraction, GPUI navigation, and supervised hot reload.
+
 

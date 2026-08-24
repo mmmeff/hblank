@@ -66,6 +66,12 @@ The runtime joins components and variants, rejects duplicate canonical ids, unkn
 
 `HblankControlAdapter<T>` maps a project domain type onto a built-in carrier type. `#[hblank(adapter = AdapterType)]` makes the derive call that adapter while preserving Hblank-owned metadata validation and editor behavior; adapters do not provide arbitrary control rendering.
 
+## Themes
+
+The harness owns a three-state `ThemeMode`: System, Light, and Dark. System resolves from GPUI `WindowAppearance` and observes changes; an override lasts only for the current supervised dev session. Dynamic chrome colors come from Hblank's light/dark palettes.
+
+Projects opt into preview theme switching with one `#[hblank::theme_hook]` function whose fully qualified Rust path is configured as `theme_hook`. The macro registers `fn(ThemeMode, ResolvedTheme, &mut App)`; the CLI passes the configured path to every preview process. Missing hooks produce harness status instead of silently claiming the component switched.
+
 ## Harness state
 
 The GPUI harness owns selection, filtering, active inspector tab, editing target, and mutable fixture props. Presentational harness functions live separately under `hblank::harness`.
@@ -86,3 +92,4 @@ On relevant content change:
 6. stop the old preview after replacement is ready.
 
 A failed build leaves the old preview alive. Hblank deliberately avoids unstable Rust dynamic-library ABIs.
+

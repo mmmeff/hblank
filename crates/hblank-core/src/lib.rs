@@ -2,7 +2,7 @@
 
 mod catalog;
 mod control;
-
+mod theme;
 pub use catalog::{
     ComponentDefinition, ComponentMetadata, FixtureDefinition, FixtureMetadata,
     FixtureRegistrationData, FixtureRegistrationMetadata, RegisteredCatalog, RegistryError,
@@ -12,6 +12,7 @@ pub use control::{
     ControlDefinition, ControlError, ControlKind, ControlValue, HblankControlAdapter, HblankEnum,
     HblankProps, NumberConstraints, TextMode,
 };
+pub use theme::{ResolvedTheme, ThemeMode};
 
 #[doc(hidden)]
 pub use control::ControlField;

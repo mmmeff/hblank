@@ -13,6 +13,7 @@ pub const CONFIG_PATH: &str = ".hblank/config.toml";
 pub struct Config {
     pub fixtures: Vec<String>,
     pub ignore: Vec<String>,
+    pub theme_hook: Option<String>,
     pub window: WindowConfig,
 }
 
@@ -21,6 +22,7 @@ impl Default for Config {
         Self {
             fixtures: vec!["src/**/*.hblank.rs".to_owned()],
             ignore: vec!["target/**".to_owned(), ".hblank/**".to_owned()],
+            theme_hook: None,
             window: WindowConfig::default(),
         }
     }
@@ -84,6 +86,13 @@ impl Config {
         if self.fixtures.is_empty() || self.fixtures.iter().any(String::is_empty) {
             return Err(ConfigError::NoFixtureFilePatterns);
         }
+        if self
+            .theme_hook
+            .as_ref()
+            .is_some_and(|hook| hook.trim().is_empty())
+        {
+            return Err(ConfigError::EmptyThemeHook);
+        }
         if self.window.title.trim().is_empty() {
             return Err(ConfigError::EmptyWindowTitle);
         }
@@ -113,6 +122,8 @@ pub enum ConfigError {
     Serialize(toml::ser::Error),
     #[error("Hblank config must include at least one non-empty fixture file pattern")]
     NoFixtureFilePatterns,
+    #[error("Hblank theme hook path cannot be empty")]
+    EmptyThemeHook,
     #[error("Hblank window title cannot be empty")]
     EmptyWindowTitle,
     #[error("Hblank window size must be positive, received {width}x{height}")]

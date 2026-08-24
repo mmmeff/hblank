@@ -4,7 +4,10 @@ ignore = [
     ".hblank/**",
 ]
 
+theme_hook = "hblank_dogfood::apply_hblank_theme"
+
 [window]
 title = "hblank-dogfood · Hblank"
 width = 1440
 height = 900
+

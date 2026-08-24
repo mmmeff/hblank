@@ -7,6 +7,7 @@ compile_error!("enable exactly one GPUI backend feature");
 
 mod fixture;
 pub mod harness;
+mod theme;
 
 pub use fixture::{
     ComponentDefinition, ComponentRegistration, FixtureDefinition, FixtureRegistration,
@@ -20,9 +21,11 @@ pub use harness::run_harness;
 pub use hblank_core::{
     ComponentMetadata, ControlDefinition, ControlError, ControlKind, ControlValue, FixtureMetadata,
     FixtureRegistrationData, FixtureRegistrationMetadata, HblankControlAdapter, HblankEnum,
-    HblankProps, NumberConstraints, RegistryError, TextMode, canonical_source_id,
+    HblankProps, NumberConstraints, RegistryError, ResolvedTheme, TextMode, ThemeMode,
+    canonical_source_id,
 };
-pub use hblank_macros::{HblankEnum, HblankProps, component, fixture};
+pub use hblank_macros::{HblankEnum, HblankProps, component, fixture, theme_hook};
+pub use theme::{ThemeHook, ThemeHookRegistration, registered_theme_hook};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 

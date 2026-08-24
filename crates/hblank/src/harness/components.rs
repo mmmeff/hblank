@@ -9,37 +9,156 @@ use crate::gpui::{
 
 use crate::{
     ControlDefinition, ControlKind, ControlValue, HblankProps, NumberConstraints, TextMode,
+    ThemeMode,
 };
 
 pub(super) mod theme {
-    pub const CHROME: u32 = 0x17171c;
-    pub const CHROME_RAISED: u32 = 0x24242c;
-    pub const CHROME_BORDER: u32 = 0x32323c;
-    pub const SIDEBAR: u32 = 0x1d1d24;
-    pub const SIDEBAR_HOVER: u32 = 0x292932;
-    pub const SIDEBAR_SELECTED: u32 = 0x39325a;
-    pub const SIDEBAR_SELECTED_HOVER: u32 = 0x44396c;
-    pub const CHROME_TEXT: u32 = 0xf8f8f6;
-    pub const CHROME_TEXT_MUTED: u32 = 0xb0b0bb;
-    pub const SIDEBAR_TEXT: u32 = 0xd1d1d9;
-    pub const SIDEBAR_TEXT_MUTED: u32 = 0x9999a5;
-    pub const PAPER: u32 = 0xffffff;
-    pub const CANVAS: u32 = 0xf4f4f0;
-    pub const SURFACE_SUBTLE: u32 = 0xf1f1ed;
-    pub const LINE: u32 = 0xe5e5df;
-    pub const LINE_STRONG: u32 = 0xd8d8d2;
-    pub const TEXT: u32 = 0x29292e;
-    pub const TEXT_MUTED: u32 = 0x66666f;
-    pub const TEXT_SUBTLE: u32 = 0x74747e;
-    pub const ACCENT: u32 = 0x7559e8;
-    pub const ACCENT_HOVER: u32 = 0x6347d4;
-    pub const ACCENT_WASH: u32 = 0xeeeaff;
-    pub const ACCENT_INK: u32 = 0x3e2b86;
-    pub const SUCCESS: u32 = 0x53cf82;
-    pub const SUCCESS_TEXT: u32 = 0xa2e8bb;
-    pub const ERROR: u32 = 0xf18175;
-    pub const ERROR_INK: u32 = 0x9e3f37;
-    pub const ERROR_TEXT: u32 = 0xffb4ab;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    #[derive(Clone, Copy)]
+    struct Palette {
+        chrome: u32,
+        chrome_raised: u32,
+        chrome_border: u32,
+        sidebar: u32,
+        sidebar_hover: u32,
+        sidebar_selected: u32,
+        sidebar_selected_hover: u32,
+        chrome_text: u32,
+        chrome_text_muted: u32,
+        sidebar_text: u32,
+        sidebar_text_muted: u32,
+        paper: u32,
+        canvas: u32,
+        surface_subtle: u32,
+        line: u32,
+        line_strong: u32,
+        text: u32,
+        text_muted: u32,
+        text_subtle: u32,
+        accent: u32,
+        accent_hover: u32,
+        accent_wash: u32,
+        accent_ink: u32,
+        success: u32,
+        success_text: u32,
+        error: u32,
+        error_ink: u32,
+        error_text: u32,
+    }
+
+    const LIGHT: Palette = Palette {
+        chrome: 0xf7f7f4,
+        chrome_raised: 0xffffff,
+        chrome_border: 0xdededa,
+        sidebar: 0xefefec,
+        sidebar_hover: 0xe5e5e0,
+        sidebar_selected: 0xe4ddff,
+        sidebar_selected_hover: 0xd8ceff,
+        chrome_text: 0x29292e,
+        chrome_text_muted: 0x66666f,
+        sidebar_text: 0x3f3f47,
+        sidebar_text_muted: 0x74747e,
+        paper: 0xffffff,
+        canvas: 0xf4f4f0,
+        surface_subtle: 0xf1f1ed,
+        line: 0xe5e5df,
+        line_strong: 0xd8d8d2,
+        text: 0x29292e,
+        text_muted: 0x66666f,
+        text_subtle: 0x74747e,
+        accent: 0x7559e8,
+        accent_hover: 0x6347d4,
+        accent_wash: 0xeeeaff,
+        accent_ink: 0x3e2b86,
+        success: 0x258b63,
+        success_text: 0x216e51,
+        error: 0xc95b50,
+        error_ink: 0x9e3f37,
+        error_text: 0x9e3f37,
+    };
+
+    const DARK: Palette = Palette {
+        chrome: 0x17171c,
+        chrome_raised: 0x24242c,
+        chrome_border: 0x393944,
+        sidebar: 0x1d1d24,
+        sidebar_hover: 0x292932,
+        sidebar_selected: 0x39325a,
+        sidebar_selected_hover: 0x44396c,
+        chrome_text: 0xf8f8f6,
+        chrome_text_muted: 0xb0b0bb,
+        sidebar_text: 0xd1d1d9,
+        sidebar_text_muted: 0x9999a5,
+        paper: 0x24242c,
+        canvas: 0x101015,
+        surface_subtle: 0x2c2c35,
+        line: 0x393944,
+        line_strong: 0x4a4a57,
+        text: 0xf8f8f6,
+        text_muted: 0xb0b0bb,
+        text_subtle: 0x9999a5,
+        accent: 0x8b75f6,
+        accent_hover: 0x7559e8,
+        accent_wash: 0x39325a,
+        accent_ink: 0xddd5ff,
+        success: 0x53cf82,
+        success_text: 0xa2e8bb,
+        error: 0xf18175,
+        error_ink: 0xffb4ab,
+        error_text: 0xffb4ab,
+    };
+
+    static DARK_MODE: AtomicBool = AtomicBool::new(false);
+
+    pub fn set_dark(dark: bool) {
+        DARK_MODE.store(dark, Ordering::Relaxed);
+    }
+
+    fn palette() -> &'static Palette {
+        if DARK_MODE.load(Ordering::Relaxed) {
+            &DARK
+        } else {
+            &LIGHT
+        }
+    }
+
+    macro_rules! colors {
+        ($($name:ident),+ $(,)?) => {
+            $(pub fn $name() -> u32 { palette().$name })+
+        };
+    }
+
+    colors!(
+        chrome,
+        chrome_raised,
+        chrome_border,
+        sidebar,
+        sidebar_hover,
+        sidebar_selected,
+        sidebar_selected_hover,
+        chrome_text,
+        chrome_text_muted,
+        sidebar_text,
+        sidebar_text_muted,
+        paper,
+        canvas,
+        surface_subtle,
+        line,
+        line_strong,
+        text,
+        text_muted,
+        text_subtle,
+        accent,
+        accent_hover,
+        accent_wash,
+        accent_ink,
+        success,
+        success_text,
+        error,
+        error_ink,
+        error_text,
+    );
 }
 
 pub type UiHandler<T> = Rc<dyn Fn(&T, &mut Window, &mut App)>;
@@ -67,10 +186,10 @@ pub fn header(props: HeaderProps) -> Div {
         .items_center()
         .justify_between()
         .px_5()
-        .bg(rgb(theme::CHROME))
+        .bg(rgb(theme::chrome()))
         .border_b_1()
-        .border_color(rgb(theme::CHROME_BORDER))
-        .text_color(rgb(theme::CHROME_TEXT))
+        .border_color(rgb(theme::chrome_border()))
+        .text_color(rgb(theme::chrome_text()))
         .child(
             div()
                 .flex()
@@ -83,7 +202,7 @@ pub fn header(props: HeaderProps) -> Div {
                         .items_center()
                         .justify_center()
                         .rounded_lg()
-                        .bg(rgb(theme::ACCENT))
+                        .bg(rgb(theme::accent()))
                         .font_weight(FontWeight::BOLD)
                         .child("H"),
                 )
@@ -98,11 +217,11 @@ pub fn header(props: HeaderProps) -> Div {
                                 .font_weight(FontWeight::SEMIBOLD)
                                 .child("hblank"),
                         )
-                        .child(div().w(px(1.0)).h_4().bg(rgb(theme::CHROME_BORDER)))
+                        .child(div().w(px(1.0)).h_4().bg(rgb(theme::chrome_border())))
                         .child(
                             div()
                                 .text_xs()
-                                .text_color(rgb(theme::CHROME_TEXT_MUTED))
+                                .text_color(rgb(theme::chrome_text_muted()))
                                 .child(props.project),
                         ),
                 ),
@@ -116,12 +235,12 @@ pub fn header(props: HeaderProps) -> Div {
                 .child(
                     div()
                         .border_1()
-                        .border_color(rgb(theme::CHROME_BORDER))
+                        .border_color(rgb(theme::chrome_border()))
                         .rounded_full()
-                        .bg(rgb(theme::CHROME_RAISED))
+                        .bg(rgb(theme::chrome_raised()))
                         .px_3()
                         .py_1()
-                        .text_color(rgb(theme::SIDEBAR_TEXT))
+                        .text_color(rgb(theme::sidebar_text()))
                         .child(format!(
                             "{} fixture{}",
                             props.fixture_count,
@@ -134,14 +253,14 @@ pub fn header(props: HeaderProps) -> Div {
                         .items_center()
                         .gap_2()
                         .text_color(rgb(if ready {
-                            theme::SUCCESS_TEXT
+                            theme::success_text()
                         } else {
-                            theme::ERROR_TEXT
+                            theme::error_text()
                         }))
                         .child(div().size_2().rounded_full().bg(rgb(if ready {
-                            theme::SUCCESS
+                            theme::success()
                         } else {
-                            theme::ERROR
+                            theme::error()
                         })))
                         .child(props.status),
                 ),
@@ -174,26 +293,26 @@ pub fn search(props: SearchProps, on_focus: UiHandler<SearchAction>) -> impl Int
         .rounded_lg()
         .border_1()
         .border_color(if active {
-            rgb(theme::ACCENT)
+            rgb(theme::accent())
         } else {
-            rgb(theme::CHROME_BORDER)
+            rgb(theme::chrome_border())
         })
-        .bg(rgb(theme::CHROME_RAISED))
+        .bg(rgb(theme::chrome_raised()))
         .text_sm()
         .text_color(if empty {
-            rgb(theme::SIDEBAR_TEXT_MUTED)
+            rgb(theme::sidebar_text_muted())
         } else {
-            rgb(theme::CHROME_TEXT)
+            rgb(theme::chrome_text())
         })
         .cursor_pointer()
         .hover(move |this| {
             this.border_color(rgb(if active {
-                theme::ACCENT
+                theme::accent()
             } else {
-                theme::CHROME_TEXT_MUTED
+                theme::chrome_text_muted()
             }))
         })
-        .active(|this| this.bg(rgb(theme::SIDEBAR_HOVER)))
+        .active(|this| this.bg(rgb(theme::sidebar_hover())))
         .on_click(move |_, window, cx| on_focus(&SearchAction, window, cx))
         .child(if empty {
             SharedString::from("Filter fixtures…")
@@ -243,7 +362,7 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
                     .px_4()
                     .text_xs()
                     .font_weight(FontWeight::SEMIBOLD)
-                    .text_color(rgb(theme::SIDEBAR_TEXT_MUTED))
+                    .text_color(rgb(theme::sidebar_text_muted()))
                     .child(item.group)
                     .into_any_element(),
             );
@@ -262,9 +381,9 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
                 .mt_5()
                 .p_4()
                 .rounded_lg()
-                .bg(rgb(theme::CHROME_RAISED))
+                .bg(rgb(theme::chrome_raised()))
                 .text_sm()
-                .text_color(rgb(theme::SIDEBAR_TEXT_MUTED))
+                .text_color(rgb(theme::sidebar_text_muted()))
                 .child("No matching fixtures")
                 .into_any_element(),
         );
@@ -276,9 +395,9 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
         .min_h_0()
         .flex()
         .flex_col()
-        .bg(rgb(theme::SIDEBAR))
+        .bg(rgb(theme::sidebar()))
         .border_r_1()
-        .border_color(rgb(theme::CHROME_BORDER))
+        .border_color(rgb(theme::chrome_border()))
         .child(
             div()
                 .id("hblank-navigation-scroll")
@@ -293,9 +412,9 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
                 .px_3()
                 .py_3()
                 .border_t_1()
-                .border_color(rgb(theme::CHROME_BORDER))
+                .border_color(rgb(theme::chrome_border()))
                 .text_xs()
-                .text_color(rgb(theme::SIDEBAR_TEXT_MUTED))
+                .text_color(rgb(theme::sidebar_text_muted()))
                 .child("Type to filter · Arrow keys to navigate"),
         )
 }
@@ -320,37 +439,37 @@ fn navigation_row(
         .rounded_md()
         .border_1()
         .border_color(rgb(if selected {
-            theme::ACCENT
+            theme::accent()
         } else {
-            theme::SIDEBAR
+            theme::sidebar()
         }))
         .text_sm()
         .cursor_pointer()
         .bg(if selected {
-            rgb(theme::SIDEBAR_SELECTED)
+            rgb(theme::sidebar_selected())
         } else {
-            rgb(theme::SIDEBAR)
+            rgb(theme::sidebar())
         })
         .text_color(if selected {
-            rgb(theme::CHROME_TEXT)
+            rgb(theme::chrome_text())
         } else {
-            rgb(theme::SIDEBAR_TEXT)
+            rgb(theme::sidebar_text())
         })
         .hover(move |this| {
             if selected {
-                this.bg(rgb(theme::SIDEBAR_SELECTED_HOVER))
-                    .border_color(rgb(theme::ACCENT))
+                this.bg(rgb(theme::sidebar_selected_hover()))
+                    .border_color(rgb(theme::accent()))
             } else {
-                this.bg(rgb(theme::SIDEBAR_HOVER))
-                    .border_color(rgb(theme::CHROME_BORDER))
+                this.bg(rgb(theme::sidebar_hover()))
+                    .border_color(rgb(theme::chrome_border()))
             }
-            .text_color(rgb(theme::CHROME_TEXT))
+            .text_color(rgb(theme::chrome_text()))
         })
         .active(move |this| {
             this.bg(rgb(if selected {
-                theme::SIDEBAR_SELECTED_HOVER
+                theme::sidebar_selected_hover()
             } else {
-                theme::CHROME_RAISED
+                theme::chrome_raised()
             }))
         })
         .on_click(move |_, window, cx| handler(&action, window, cx))
@@ -363,18 +482,24 @@ pub struct ToolbarProps {
     pub title: SharedString,
     pub source: SharedString,
     pub active_tab: InspectorTab,
+    pub theme_mode: ThemeMode,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ToolbarAction {
     ShowControls,
     ShowDocs,
+    SetTheme(ThemeMode),
 }
 
 #[must_use]
 pub fn toolbar(props: ToolbarProps, on_action: UiHandler<ToolbarAction>) -> Div {
-    let controls_handler = on_action.clone();
-    let docs_handler = on_action;
+    let ToolbarProps {
+        title,
+        source,
+        active_tab,
+        theme_mode,
+    } = props;
     div()
         .h(rems(4.0))
         .flex_none()
@@ -382,9 +507,9 @@ pub fn toolbar(props: ToolbarProps, on_action: UiHandler<ToolbarAction>) -> Div 
         .items_center()
         .justify_between()
         .px_5()
-        .bg(rgb(theme::PAPER))
+        .bg(rgb(theme::paper()))
         .border_b_1()
-        .border_color(rgb(theme::LINE))
+        .border_color(rgb(theme::line()))
         .child(
             div()
                 .flex_1()
@@ -397,15 +522,15 @@ pub fn toolbar(props: ToolbarProps, on_action: UiHandler<ToolbarAction>) -> Div 
                     div()
                         .text_sm()
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(rgb(theme::TEXT))
-                        .child(props.title),
+                        .text_color(rgb(theme::text()))
+                        .child(title),
                 )
                 .child(
                     div()
                         .min_w_0()
                         .text_xs()
-                        .text_color(rgb(theme::TEXT_SUBTLE))
-                        .child(props.source),
+                        .text_color(rgb(theme::text_subtle()))
+                        .child(source),
                 ),
         )
         .child(
@@ -413,27 +538,74 @@ pub fn toolbar(props: ToolbarProps, on_action: UiHandler<ToolbarAction>) -> Div 
                 .flex_none()
                 .flex()
                 .items_center()
-                .gap_1()
-                .rounded_lg()
-                .border_1()
-                .border_color(rgb(theme::LINE))
-                .bg(rgb(theme::SURFACE_SUBTLE))
-                .p_1()
-                .child(tab_button(
-                    "Controls",
-                    props.active_tab == InspectorTab::Controls,
-                    move |window, cx| {
-                        controls_handler(&ToolbarAction::ShowControls, window, cx);
-                    },
-                ))
-                .child(tab_button(
-                    "Docs",
-                    props.active_tab == InspectorTab::Docs,
-                    move |window, cx| {
-                        docs_handler(&ToolbarAction::ShowDocs, window, cx);
-                    },
-                )),
+                .gap_2()
+                .child(theme_buttons(theme_mode, on_action.clone()))
+                .child(inspector_buttons(active_tab, on_action)),
         )
+}
+
+fn theme_buttons(mode: ThemeMode, on_action: UiHandler<ToolbarAction>) -> Div {
+    let system_handler = on_action.clone();
+    let light_handler = on_action.clone();
+    let dark_handler = on_action;
+    div()
+        .flex()
+        .items_center()
+        .gap_1()
+        .rounded_lg()
+        .border_1()
+        .border_color(rgb(theme::line()))
+        .bg(rgb(theme::surface_subtle()))
+        .p_1()
+        .child(tab_button(
+            "System",
+            mode == ThemeMode::System,
+            move |window, cx| {
+                system_handler(&ToolbarAction::SetTheme(ThemeMode::System), window, cx);
+            },
+        ))
+        .child(tab_button(
+            "Light",
+            mode == ThemeMode::Light,
+            move |window, cx| {
+                light_handler(&ToolbarAction::SetTheme(ThemeMode::Light), window, cx);
+            },
+        ))
+        .child(tab_button(
+            "Dark",
+            mode == ThemeMode::Dark,
+            move |window, cx| {
+                dark_handler(&ToolbarAction::SetTheme(ThemeMode::Dark), window, cx);
+            },
+        ))
+}
+
+fn inspector_buttons(active: InspectorTab, on_action: UiHandler<ToolbarAction>) -> Div {
+    let controls_handler = on_action.clone();
+    let docs_handler = on_action;
+    div()
+        .flex()
+        .items_center()
+        .gap_1()
+        .rounded_lg()
+        .border_1()
+        .border_color(rgb(theme::line()))
+        .bg(rgb(theme::surface_subtle()))
+        .p_1()
+        .child(tab_button(
+            "Controls",
+            active == InspectorTab::Controls,
+            move |window, cx| {
+                controls_handler(&ToolbarAction::ShowControls, window, cx);
+            },
+        ))
+        .child(tab_button(
+            "Docs",
+            active == InspectorTab::Docs,
+            move |window, cx| {
+                docs_handler(&ToolbarAction::ShowDocs, window, cx);
+            },
+        ))
 }
 
 fn tab_button(
@@ -452,25 +624,25 @@ fn tab_button(
         .font_weight(FontWeight::SEMIBOLD)
         .cursor_pointer()
         .bg(if selected {
-            rgb(theme::PAPER)
+            rgb(theme::paper())
         } else {
-            rgb(theme::SURFACE_SUBTLE)
+            rgb(theme::surface_subtle())
         })
         .text_color(if selected {
-            rgb(theme::ACCENT_INK)
+            rgb(theme::accent_ink())
         } else {
-            rgb(theme::TEXT_MUTED)
+            rgb(theme::text_muted())
         })
         .when(selected, gpui::Styled::shadow_sm)
         .hover(move |this| {
             if selected {
-                this.text_color(rgb(theme::ACCENT_INK))
+                this.text_color(rgb(theme::accent_ink()))
             } else {
-                this.bg(rgb(theme::ACCENT_WASH))
-                    .text_color(rgb(theme::ACCENT_INK))
+                this.bg(rgb(theme::accent_wash()))
+                    .text_color(rgb(theme::accent_ink()))
             }
         })
-        .active(|this| this.bg(rgb(theme::ACCENT_WASH)))
+        .active(|this| this.bg(rgb(theme::accent_wash())))
         .on_click(move |_, window, cx| on_click(window, cx))
         .child(label)
 }
@@ -488,7 +660,7 @@ pub fn canvas(props: CanvasProps, preview: AnyElement) -> Div {
         .min_h_0()
         .flex()
         .flex_col()
-        .bg(rgb(theme::CANVAS))
+        .bg(rgb(theme::canvas()))
         .child(
             div()
                 .h(rems(2.375))
@@ -497,10 +669,10 @@ pub fn canvas(props: CanvasProps, preview: AnyElement) -> Div {
                 .items_center()
                 .px_5()
                 .border_b_1()
-                .border_color(rgb(theme::LINE))
+                .border_color(rgb(theme::line()))
                 .text_xs()
                 .font_weight(FontWeight::SEMIBOLD)
-                .text_color(rgb(theme::TEXT_SUBTLE))
+                .text_color(rgb(theme::text_subtle()))
                 .child(props.label),
         )
         .child(
@@ -522,7 +694,7 @@ pub fn canvas(props: CanvasProps, preview: AnyElement) -> Div {
                         .items_center()
                         .justify_center()
                         .rounded_xl()
-                        .bg(rgb(theme::PAPER))
+                        .bg(rgb(theme::paper()))
                         .shadow_md()
                         .child(preview),
                 ),
@@ -581,9 +753,9 @@ pub fn controls_panel(props: ControlsPanelProps<'_>, on_action: UiHandler<Contro
         .flex_none()
         .flex()
         .flex_col()
-        .bg(rgb(theme::PAPER))
+        .bg(rgb(theme::paper()))
         .border_l_1()
-        .border_color(rgb(theme::LINE))
+        .border_color(rgb(theme::line()))
         .child(
             div()
                 .h(rems(3.0))
@@ -593,12 +765,12 @@ pub fn controls_panel(props: ControlsPanelProps<'_>, on_action: UiHandler<Contro
                 .justify_between()
                 .px_4()
                 .border_b_1()
-                .border_color(rgb(theme::LINE))
+                .border_color(rgb(theme::line()))
                 .child(
                     div()
                         .text_xs()
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(rgb(theme::TEXT))
+                        .text_color(rgb(theme::text()))
                         .child("PROPERTIES"),
                 )
                 .child(
@@ -611,13 +783,13 @@ pub fn controls_panel(props: ControlsPanelProps<'_>, on_action: UiHandler<Contro
                         .rounded_md()
                         .text_xs()
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(rgb(theme::ACCENT_HOVER))
+                        .text_color(rgb(theme::accent_hover()))
                         .cursor_pointer()
                         .hover(|this| {
-                            this.bg(rgb(theme::ACCENT_WASH))
-                                .text_color(rgb(theme::ACCENT_INK))
+                            this.bg(rgb(theme::accent_wash()))
+                                .text_color(rgb(theme::accent_ink()))
                         })
-                        .active(|this| this.bg(rgb(theme::LINE)))
+                        .active(|this| this.bg(rgb(theme::line())))
                         .on_click(move |_, window, cx| {
                             reset_handler(&ControlAction::Reset, window, cx);
                         })
@@ -654,7 +826,7 @@ fn control_row(
         .px_4()
         .py_4()
         .border_b_1()
-        .border_color(rgb(theme::LINE))
+        .border_color(rgb(theme::line()))
         .child(
             div()
                 .mb_2()
@@ -665,13 +837,13 @@ fn control_row(
                     div()
                         .text_sm()
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(rgb(theme::TEXT))
+                        .text_color(rgb(theme::text()))
                         .child(definition.label),
                 )
                 .child(
                     div()
                         .text_xs()
-                        .text_color(rgb(theme::TEXT_SUBTLE))
+                        .text_color(rgb(theme::text_subtle()))
                         .child(definition.kind.name()),
                 ),
         )
@@ -680,7 +852,7 @@ fn control_row(
                 div()
                     .mb_3()
                     .text_xs()
-                    .text_color(rgb(theme::TEXT_MUTED))
+                    .text_color(rgb(theme::text_muted()))
                     .child(definition.docs),
             )
         })
@@ -716,7 +888,7 @@ fn control_input(
         }
         _ => div()
             .text_xs()
-            .text_color(rgb(theme::ERROR_INK))
+            .text_color(rgb(theme::error_ink()))
             .child("Control value unavailable")
             .into_any_element(),
     }
@@ -743,25 +915,25 @@ fn boolean_control(
         .rounded_full()
         .cursor_pointer()
         .bg(rgb(if value {
-            theme::ACCENT
+            theme::accent()
         } else {
-            theme::LINE_STRONG
+            theme::line_strong()
         }))
         .when(!value, gpui::Styled::justify_start)
         .hover(move |this| {
             this.bg(rgb(if value {
-                theme::ACCENT_HOVER
+                theme::accent_hover()
             } else {
-                theme::CHROME_TEXT_MUTED
+                theme::chrome_text_muted()
             }))
         })
-        .active(|this| this.bg(rgb(theme::ACCENT_HOVER)))
+        .active(|this| this.bg(rgb(theme::accent_hover())))
         .on_click(move |_, window, cx| handler(&action, window, cx))
         .child(
             div()
                 .size_4()
                 .rounded_full()
-                .bg(rgb(theme::PAPER))
+                .bg(rgb(theme::paper()))
                 .shadow_sm(),
         )
         .into_any_element()
@@ -791,26 +963,26 @@ fn text_control(
         .rounded_md()
         .border_1()
         .border_color(rgb(if editing {
-            theme::ACCENT
+            theme::accent()
         } else {
-            theme::LINE_STRONG
+            theme::line_strong()
         }))
-        .bg(rgb(theme::PAPER))
+        .bg(rgb(theme::paper()))
         .text_sm()
         .text_color(rgb(if empty {
-            theme::TEXT_SUBTLE
+            theme::text_subtle()
         } else {
-            theme::TEXT
+            theme::text()
         }))
         .cursor_pointer()
         .hover(move |this| {
             this.border_color(rgb(if editing {
-                theme::ACCENT
+                theme::accent()
             } else {
-                theme::CHROME_TEXT_MUTED
+                theme::chrome_text_muted()
             }))
         })
-        .active(|this| this.bg(rgb(theme::SURFACE_SUBTLE)))
+        .active(|this| this.bg(rgb(theme::surface_subtle())))
         .on_click(move |_, window, cx| handler(&action, window, cx))
         .child(if empty {
             SharedString::from(if mode == TextMode::Multiline {
@@ -870,16 +1042,16 @@ fn number_control(
                         .rounded_md()
                         .border_1()
                         .border_color(rgb(if draft.is_some() {
-                            theme::ACCENT
+                            theme::accent()
                         } else {
-                            theme::LINE_STRONG
+                            theme::line_strong()
                         }))
-                        .bg(rgb(theme::SURFACE_SUBTLE))
+                        .bg(rgb(theme::surface_subtle()))
                         .text_sm()
                         .text_color(rgb(if display.is_empty() {
-                            theme::TEXT_SUBTLE
+                            theme::text_subtle()
                         } else {
-                            theme::TEXT
+                            theme::text()
                         }))
                         .cursor_pointer()
                         .on_click(move |_, window, cx| edit(&edit_action, window, cx))
@@ -897,7 +1069,7 @@ fn number_control(
             this.child(
                 div()
                     .text_xs()
-                    .text_color(rgb(theme::TEXT_SUBTLE))
+                    .text_color(rgb(theme::text_subtle()))
                     .child(constraint_label),
             )
         })
@@ -934,33 +1106,33 @@ fn enum_control(
                 .rounded_md()
                 .border_1()
                 .border_color(rgb(if is_selected {
-                    theme::ACCENT
+                    theme::accent()
                 } else {
-                    theme::LINE_STRONG
+                    theme::line_strong()
                 }))
                 .bg(rgb(if is_selected {
-                    theme::ACCENT
+                    theme::accent()
                 } else {
-                    theme::PAPER
+                    theme::paper()
                 }))
                 .text_xs()
                 .text_color(rgb(if is_selected {
-                    theme::CHROME_TEXT
+                    theme::chrome_text()
                 } else {
-                    theme::ACCENT_INK
+                    theme::accent_ink()
                 }))
                 .when(is_selected, |this| this.font_weight(FontWeight::SEMIBOLD))
                 .cursor_pointer()
                 .hover(move |this| {
                     if is_selected {
-                        this.bg(rgb(theme::ACCENT_HOVER))
-                            .border_color(rgb(theme::ACCENT_HOVER))
+                        this.bg(rgb(theme::accent_hover()))
+                            .border_color(rgb(theme::accent_hover()))
                     } else {
-                        this.bg(rgb(theme::ACCENT_WASH))
-                            .border_color(rgb(theme::ACCENT))
+                        this.bg(rgb(theme::accent_wash()))
+                            .border_color(rgb(theme::accent()))
                     }
                 })
-                .active(|this| this.bg(rgb(theme::ACCENT_HOVER)))
+                .active(|this| this.bg(rgb(theme::accent_hover())))
                 .on_click(move |_, window, cx| option_handler(&action, window, cx))
                 .child(*option)
         }))
@@ -980,15 +1152,15 @@ fn step_button(
         .justify_center()
         .rounded_md()
         .border_1()
-        .border_color(rgb(theme::LINE_STRONG))
-        .bg(rgb(theme::PAPER))
-        .text_color(rgb(theme::ACCENT_INK))
+        .border_color(rgb(theme::line_strong()))
+        .bg(rgb(theme::paper()))
+        .text_color(rgb(theme::accent_ink()))
         .cursor_pointer()
         .hover(|this| {
-            this.bg(rgb(theme::ACCENT_WASH))
-                .border_color(rgb(theme::ACCENT))
+            this.bg(rgb(theme::accent_wash()))
+                .border_color(rgb(theme::accent()))
         })
-        .active(|this| this.bg(rgb(theme::LINE)))
+        .active(|this| this.bg(rgb(theme::line())))
         .on_click(move |_, window, cx| on_click(window, cx))
         .child(label)
 }
@@ -1040,9 +1212,9 @@ pub fn docs_panel(props: DocsPanelProps) -> Div {
         .flex_none()
         .flex()
         .flex_col()
-        .bg(rgb(theme::PAPER))
+        .bg(rgb(theme::paper()))
         .border_l_1()
-        .border_color(rgb(theme::LINE))
+        .border_color(rgb(theme::line()))
         .child(
             div()
                 .h(rems(3.0))
@@ -1051,10 +1223,10 @@ pub fn docs_panel(props: DocsPanelProps) -> Div {
                 .items_center()
                 .px_4()
                 .border_b_1()
-                .border_color(rgb(theme::LINE))
+                .border_color(rgb(theme::line()))
                 .text_xs()
                 .font_weight(FontWeight::SEMIBOLD)
-                .text_color(rgb(theme::TEXT))
+                .text_color(rgb(theme::text()))
                 .child("DOCUMENTATION"),
         )
         .child(
@@ -1069,7 +1241,7 @@ pub fn docs_panel(props: DocsPanelProps) -> Div {
                         .mb_3()
                         .text_lg()
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(rgb(theme::TEXT))
+                        .text_color(rgb(theme::text()))
                         .child(props.title),
                 )
                 .child(
@@ -1077,9 +1249,9 @@ pub fn docs_panel(props: DocsPanelProps) -> Div {
                         .mb_5()
                         .text_sm()
                         .text_color(if has_docs {
-                            rgb(theme::TEXT_MUTED)
+                            rgb(theme::text_muted())
                         } else {
-                            rgb(theme::TEXT_SUBTLE)
+                            rgb(theme::text_subtle())
                         })
                         .child(if has_docs {
                             props.docs
@@ -1091,9 +1263,9 @@ pub fn docs_panel(props: DocsPanelProps) -> Div {
                     div()
                         .p_3()
                         .rounded_lg()
-                        .bg(rgb(theme::SURFACE_SUBTLE))
+                        .bg(rgb(theme::surface_subtle()))
                         .text_xs()
-                        .text_color(rgb(theme::TEXT_SUBTLE))
+                        .text_color(rgb(theme::text_subtle()))
                         .child(props.source),
                 ),
         )
@@ -1113,7 +1285,7 @@ pub fn empty_state(props: EmptyStateProps) -> Div {
         .flex()
         .items_center()
         .justify_center()
-        .bg(rgb(theme::CANVAS))
+        .bg(rgb(theme::canvas()))
         .child(
             div()
                 .w(rems(26.25))
@@ -1122,7 +1294,7 @@ pub fn empty_state(props: EmptyStateProps) -> Div {
                 .flex_col()
                 .items_center()
                 .rounded_xl()
-                .bg(rgb(theme::PAPER))
+                .bg(rgb(theme::paper()))
                 .shadow_md()
                 .text_center()
                 .child(
@@ -1133,9 +1305,9 @@ pub fn empty_state(props: EmptyStateProps) -> Div {
                         .items_center()
                         .justify_center()
                         .rounded_lg()
-                        .bg(rgb(theme::ACCENT))
+                        .bg(rgb(theme::accent()))
                         .font_weight(FontWeight::BOLD)
-                        .text_color(rgb(theme::CHROME_TEXT))
+                        .text_color(rgb(theme::chrome_text()))
                         .child("H"),
                 )
                 .child(
@@ -1143,13 +1315,13 @@ pub fn empty_state(props: EmptyStateProps) -> Div {
                         .mb_2()
                         .text_lg()
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(rgb(theme::TEXT))
+                        .text_color(rgb(theme::text()))
                         .child(props.title),
                 )
                 .child(
                     div()
                         .text_sm()
-                        .text_color(rgb(theme::TEXT_MUTED))
+                        .text_color(rgb(theme::text_muted()))
                         .child(props.body),
                 ),
         )

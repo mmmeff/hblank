@@ -2,8 +2,18 @@
 
 //! Dogfooding fixtures for Hblank's own presentational components.
 
-use gpui::{App, Div, FontWeight, Window, div, prelude::*, px, rgb};
-use hblank::{HblankEnum, HblankProps};
+use gpui::{App, Div, FontWeight, Global, Window, div, prelude::*, px, rgb};
+use hblank::{HblankEnum, HblankProps, ResolvedTheme, ThemeMode};
+
+#[derive(Clone, Copy)]
+pub struct DogfoodTheme(pub ResolvedTheme);
+
+impl Global for DogfoodTheme {}
+
+#[hblank::theme_hook]
+pub fn apply_hblank_theme(_mode: ThemeMode, resolved: ResolvedTheme, cx: &mut App) {
+    cx.set_global(DogfoodTheme(resolved));
+}
 
 #[derive(Clone, Copy, Debug, Default, HblankEnum)]
 pub enum Accent {
@@ -40,7 +50,10 @@ impl Default for FixtureCardProps {
 
 /// A state-free GPUI card used to exercise every automatic Hblank control kind.
 #[must_use]
-pub fn fixture_card(props: &FixtureCardProps, _window: &mut Window, _cx: &mut App) -> Div {
+pub fn fixture_card(props: &FixtureCardProps, _window: &mut Window, cx: &mut App) -> Div {
+    let dark = cx
+        .try_global::<DogfoodTheme>()
+        .is_some_and(|theme| theme.0 == ResolvedTheme::Dark);
     let accent = match props.accent {
         Accent::Violet => rgb(0x7357d8),
         Accent::Jade => rgb(0x258b63),
@@ -52,8 +65,8 @@ pub fn fixture_card(props: &FixtureCardProps, _window: &mut Window, _cx: &mut Ap
         .rounded_lg()
         .border_1()
         .border_color(if props.active { accent } else { rgb(0xd8d8d3) })
-        .bg(rgb(0xffffff))
-        .text_color(rgb(0x29292d))
+        .bg(rgb(if dark { 0x24242c } else { 0xffffff }))
+        .text_color(rgb(if dark { 0xf8f8f6 } else { 0x29292d }))
         .child(
             div()
                 .mb_2()
@@ -67,8 +80,16 @@ pub fn fixture_card(props: &FixtureCardProps, _window: &mut Window, _cx: &mut Ap
                 .items_center()
                 .justify_between()
                 .text_sm()
-                .text_color(rgb(0x6e6e76))
+                .text_color(rgb(if dark { 0xb0b0bb } else { 0x6e6e76 }))
                 .child(if props.active { "Active" } else { "Inactive" })
                 .child(format!("Count {}", props.count)),
         )
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn registers_configured_theme_hook_path() {
+        assert!(hblank::registered_theme_hook("hblank_dogfood::apply_hblank_theme").is_some());
+    }
 }

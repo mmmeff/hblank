@@ -293,6 +293,9 @@ fn spawn_preview(
         .env("HBLANK_WINDOW_HEIGHT", config.window.height.to_string())
         .env("HBLANK_SESSION_ID", session_id)
         .stdin(Stdio::null());
+    if let Some(theme_hook) = &config.theme_hook {
+        command.env("HBLANK_THEME_HOOK", theme_hook);
+    }
     if let Some(fixture) = fixture {
         command.env("HBLANK_INITIAL_FIXTURE", fixture);
     }

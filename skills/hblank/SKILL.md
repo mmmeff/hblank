@@ -134,7 +134,7 @@ hblank dev --project crates/ui --fixture src/badge.hblank.rs
 
 Relative fixture paths resolve from `--project`; absolute paths also work. The file must match configured discovery. If it contains multiple fixtures, the first in deterministic navigation order opens.
 
-Keep `hblank dev` running while editing. A successful build replaces the preview automatically and preserves the latest selection plus non-default control values for that command's session. Starting a new `hblank dev` intentionally returns controls to source-defined fixture defaults. A failed build leaves the last successful preview open; fix the compiler error rather than restarting repeatedly.
+Keep `hblank dev` running while editing. Verify System/Light/Dark from the toolbar when the component is theme-sensitive; when `theme_hook` is configured, confirm both harness chrome and the production component switch. A successful build replaces the preview automatically and preserves the latest selection, theme mode, and non-default control values for that command's session. Starting a new `hblank dev` intentionally returns controls to source-defined fixture defaults. A failed build leaves the last successful preview open; fix the compiler error rather than restarting repeatedly.
 
 **Complete when:** the actual GPUI window opens on the requested fixture and the selected id is visible in navigation.
 
@@ -182,4 +182,5 @@ Also run the narrow command that builds the changed preview and exercise the fix
 - Read [references/framework.md](references/framework.md) when changing configuration, discovery, macros, registration, preview startup, or hot reload.
 - Read [references/component-fixtures.md](references/component-fixtures.md) when creating props, enums, components, fixture adapters, or fixture functions.
 - Read [references/troubleshooting.md](references/troubleshooting.md) when discovery, compilation, controls, docs, direct fixture launch, or reload fails.
+
 

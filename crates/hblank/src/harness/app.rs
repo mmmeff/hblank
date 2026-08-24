@@ -12,12 +12,14 @@ use crate::gpui;
 use crate::gpui::Application;
 use crate::gpui::{
     App, Bounds, Context, FocusHandle, IntoElement, KeyDownEvent, Modifiers, Render, SharedString,
-    Window, WindowBounds, WindowOptions, div, prelude::*, px, rems, rgb, size,
+    Subscription, Window, WindowAppearance, WindowBounds, WindowOptions, div, prelude::*, px, rems,
+    rgb, size,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ControlKind, ControlValue, FixtureDefinition, TextMode, registered_catalog, render_fixture,
+    ControlKind, ControlValue, FixtureDefinition, ResolvedTheme, TextMode, ThemeHook, ThemeMode,
+    registered_catalog, registered_theme_hook, render_fixture,
 };
 
 use super::components::{
@@ -50,6 +52,7 @@ struct PersistedState {
     session: String,
     selected: Option<String>,
     filter: String,
+    theme: ThemeMode,
     controls: BTreeMap<String, BTreeMap<String, ControlValue>>,
 }
 
@@ -73,6 +76,9 @@ struct HarnessApp {
     project: SharedString,
     status: SharedString,
     session: String,
+    theme_mode: ThemeMode,
+    theme_hook: Option<ThemeHook>,
+    appearance_subscription: Option<Subscription>,
     state_path: PathBuf,
 }
 
@@ -93,6 +99,17 @@ fn initial_selection<'a>(
         }
     }
     (persisted.or(first), false)
+}
+
+fn resolved_theme(mode: ThemeMode, appearance: WindowAppearance) -> ResolvedTheme {
+    match mode {
+        ThemeMode::Light => ResolvedTheme::Light,
+        ThemeMode::Dark => ResolvedTheme::Dark,
+        ThemeMode::System => match appearance {
+            WindowAppearance::Light | WindowAppearance::VibrantLight => ResolvedTheme::Light,
+            WindowAppearance::Dark | WindowAppearance::VibrantDark => ResolvedTheme::Dark,
+        },
+    }
 }
 
 fn restore_control_overrides(
@@ -132,10 +149,19 @@ impl HarnessApp {
             Ok(catalog) => (catalog.into_parts().1, SharedString::from("Ready")),
             Err(error) => (Vec::new(), SharedString::from(error.to_string())),
         };
-        if persisted.session == session {
+        let theme_mode = if persisted.session == session {
             restore_control_overrides(&mut fixtures, &persisted.controls);
+            persisted.theme
         } else {
             persisted.controls.clear();
+            ThemeMode::System
+        };
+        let theme_hook_name = env::var("HBLANK_THEME_HOOK").ok();
+        let theme_hook = theme_hook_name.as_deref().and_then(registered_theme_hook);
+        if let Some(name) = &theme_hook_name
+            && theme_hook.is_none()
+        {
+            status = format!("Configured theme hook '{name}' is not registered").into();
         }
         let requested_fixture = env::var("HBLANK_INITIAL_FIXTURE").ok();
         let (selected, matched_fixture) = initial_selection(
@@ -164,7 +190,7 @@ impl HarnessApp {
         focus(&focus_handle, window, cx);
         println!("Hblank harness ready: {} fixtures", fixtures.len());
 
-        let app = Self {
+        let mut app = Self {
             fixtures,
             navigation,
             selected,
@@ -183,8 +209,14 @@ impl HarnessApp {
                 .into(),
             status,
             session,
+            theme_mode,
+            theme_hook,
+            appearance_subscription: None,
             state_path,
         };
+        app.apply_theme(window, cx);
+        app.appearance_subscription =
+            Some(cx.observe_window_appearance(window, HarnessApp::apply_theme));
         if matched_fixture {
             app.persist();
         }
@@ -268,11 +300,26 @@ impl HarnessApp {
     }
 
     #[allow(clippy::trivially_copy_pass_by_ref)]
-    fn on_toolbar(&mut self, action: &ToolbarAction, _window: &mut Window, cx: &mut Context<Self>) {
-        self.inspector = match action {
-            ToolbarAction::ShowControls => InspectorTab::Controls,
-            ToolbarAction::ShowDocs => InspectorTab::Docs,
-        };
+    fn on_toolbar(&mut self, action: &ToolbarAction, window: &mut Window, cx: &mut Context<Self>) {
+        match action {
+            ToolbarAction::ShowControls => self.inspector = InspectorTab::Controls,
+            ToolbarAction::ShowDocs => self.inspector = InspectorTab::Docs,
+            ToolbarAction::SetTheme(mode) => {
+                self.theme_mode = *mode;
+                self.apply_theme(window, cx);
+                self.persist();
+                return;
+            }
+        }
+        cx.notify();
+    }
+
+    fn apply_theme(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let resolved = resolved_theme(self.theme_mode, window.appearance());
+        theme::set_dark(resolved == ResolvedTheme::Dark);
+        if let Some(hook) = self.theme_hook {
+            hook(self.theme_mode, resolved, cx);
+        }
         cx.notify();
     }
 
@@ -477,6 +524,7 @@ impl HarnessApp {
             session: self.session.clone(),
             selected: self.selected_id().map(str::to_owned),
             filter: self.filter.clone(),
+            theme: self.theme_mode,
             controls,
         };
         let Ok(source) = toml::to_string(&state) else {
@@ -509,6 +557,7 @@ impl HarnessApp {
                 title: metadata.title.into(),
                 source: source_label(metadata.source, metadata.line),
                 active_tab: self.inspector,
+                theme_mode: self.theme_mode,
             },
             toolbar_handler,
         );
@@ -594,8 +643,8 @@ impl Render for HarnessApp {
             .size_full()
             .flex()
             .flex_col()
-            .bg(rgb(theme::CANVAS))
-            .text_color(rgb(theme::TEXT))
+            .bg(rgb(theme::canvas()))
+            .text_color(rgb(theme::text()))
             .child(header(HeaderProps {
                 project: self.project.clone(),
                 fixture_count: self.fixtures.len(),
@@ -613,7 +662,7 @@ impl Render for HarnessApp {
                             .flex_none()
                             .flex()
                             .flex_col()
-                            .bg(rgb(theme::SIDEBAR))
+                            .bg(rgb(theme::sidebar()))
                             .child(search_surface)
                             .child(navigation_surface),
                     )
@@ -701,11 +750,14 @@ fn env_dimension(name: &str, fallback: f32) -> f32 {
 mod tests {
     use std::collections::BTreeMap;
 
-    use crate::{ControlValue, gpui::Modifiers};
+    use crate::{
+        ControlValue, ResolvedTheme, ThemeMode,
+        gpui::{Modifiers, WindowAppearance},
+    };
 
     use super::{
         MAX_UI_SCALE, MIN_UI_SCALE, PersistedState, UI_SCALE_STEP, bounded_ui_scale, env_dimension,
-        initial_selection, ui_scale_delta,
+        initial_selection, resolved_theme, ui_scale_delta,
     };
 
     #[test]
@@ -714,6 +766,7 @@ mod tests {
             session: "dev-session".to_owned(),
             selected: Some("components::button".to_owned()),
             filter: "button".to_owned(),
+            theme: ThemeMode::Dark,
             controls: BTreeMap::from([(
                 "src/button.hblank.rs#default".to_owned(),
                 BTreeMap::from([("label".to_owned(), ControlValue::Text("Saved".to_owned()))]),
@@ -724,7 +777,28 @@ mod tests {
         assert_eq!(restored.session, state.session);
         assert_eq!(restored.selected, state.selected);
         assert_eq!(restored.filter, state.filter);
+        assert_eq!(restored.theme, state.theme);
         assert_eq!(restored.controls, state.controls);
+    }
+
+    #[test]
+    fn theme_mode_resolves_system_and_overrides() {
+        assert_eq!(
+            resolved_theme(ThemeMode::System, WindowAppearance::Dark),
+            ResolvedTheme::Dark
+        );
+        assert_eq!(
+            resolved_theme(ThemeMode::System, WindowAppearance::VibrantLight),
+            ResolvedTheme::Light
+        );
+        assert_eq!(
+            resolved_theme(ThemeMode::Light, WindowAppearance::Dark),
+            ResolvedTheme::Light
+        );
+        assert_eq!(
+            resolved_theme(ThemeMode::Dark, WindowAppearance::Light),
+            ResolvedTheme::Dark
+        );
     }
 
     #[test]
