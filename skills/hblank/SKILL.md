@@ -61,16 +61,16 @@ hblank init --project crates/ui
 When developing against a local Hblank checkout, point the preview dependency at that runtime during initialization:
 
 ```bash
-hblank init --project crates/ui --runtime-path /path/to/hblank/crates/hblank
+hblank init --project crates/ui
 ```
 
 Initialization refuses to overwrite existing Hblank files. Never delete or replace a partial `.hblank/` directory to force initialization; inspect and reconcile it deliberately.
 
 The host crate needs the `hblank` dependency when its source types derive `HblankProps` or `HblankEnum`. Reuse the workspace's existing version, Git source, or path source; never guess one.
 
-Fresh preview manifests use the crates.io GPUI backend. If the host uses Zed's GPUI fork, reconcile `.hblank/Cargo.toml` to the host's exact GPUI source and select only Hblank's `zed-gpui` feature. Read [references/framework.md](references/framework.md#gpui-backend-selection) before changing backend features or preview dependencies.
+Fresh preview manifests use GPUI 0.2.2 from crates.io. Read [references/framework.md](references/framework.md#gpui-backend) before changing preview dependencies.
 
-**Complete when:** `.hblank/config.toml`, `.hblank/Cargo.toml`, `.hblank/src/main.rs`, `.hblank/generated/fixtures.rs`, and `.hblank/.gitignore` exist and parse, and the preview selects exactly one GPUI backend.
+**Complete when:** `.hblank/config.toml`, `.hblank/Cargo.toml`, `.hblank/src/main.rs`, `.hblank/generated/fixtures.rs`, and `.hblank/.gitignore` exist and parse, and the preview builds against GPUI 0.2.2.
 
 ### 3. Keep the production component boundary
 
@@ -191,7 +191,6 @@ Run `hblank test --project PATH` when fixture files contain explicit inline `#[t
 - Never claim hot reload from compilation alone; observe the updated GPUI render.
 - Never replace persisted selection on every reload; `--fixture` controls initial launch only.
 - Preserve existing project fixture file patterns and terminology.
-- Never enable both `crates-io-gpui` and `zed-gpui`; the runtime requires exactly one backend.
 - Never mix the removed pre-component fixture interface with component-first registrations; migrate cleanly.
 
 ## Reference routing

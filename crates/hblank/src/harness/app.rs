@@ -8,8 +8,8 @@ use std::{
 };
 
 use crate::gpui;
-#[cfg(feature = "crates-io-gpui")]
 use crate::gpui::Application;
+
 use crate::gpui::{
     App, Bounds, Context, FocusHandle, IntoElement, KeyDownEvent, Modifiers, Render, SharedString,
     Subscription, Window, WindowAppearance, WindowBounds, WindowOptions, div, prelude::*, px, rems,
@@ -40,14 +40,10 @@ const MIN_UI_SCALE: f32 = 0.5;
 const MAX_UI_SCALE: f32 = 2.0;
 
 fn focus(handle: &FocusHandle, window: &mut Window, cx: &mut App) {
-    #[cfg(feature = "zed-gpui")]
-    handle.focus(window, cx);
-    #[cfg(feature = "crates-io-gpui")]
-    {
-        let _ = cx;
-        handle.focus(window);
-    }
+    let _ = cx;
+    handle.focus(window);
 }
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
 struct PersistedState {
@@ -868,21 +864,10 @@ pub fn run_harness() {
         }
         return;
     }
-    #[cfg(feature = "crates-io-gpui")]
     let application = Application::new();
-    #[cfg(feature = "zed-gpui")]
-    let application = gpui_platform_zed::application();
 
     application.run(|cx: &mut App| {
-        #[cfg(feature = "crates-io-gpui")]
         cx.on_window_closed(|cx| {
-            if cx.windows().is_empty() {
-                cx.quit();
-            }
-        })
-        .detach();
-        #[cfg(feature = "zed-gpui")]
-        cx.on_window_closed(|cx, _| {
             if cx.windows().is_empty() {
                 cx.quit();
             }

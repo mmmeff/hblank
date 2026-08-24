@@ -66,17 +66,11 @@ Run the build through `hblank dev` or `hblank list` so the error points at the g
 
 If `App`, `Window`, or element types look identical but Rust rejects them, inspect the dependency sources.
 
-The host, `hblank`, and `.hblank/Cargo.toml` must resolve GPUI to the same package identity. Crates.io GPUI and Zed Git GPUI are different Rust types.
+The host, `hblank`, and `.hblank/Cargo.toml` must resolve GPUI to the same package identity. Fix the dependency graph instead of adding conversions between `App`, `Window`, or elements.
 
-The error below means Hblank received both backend features or neither one:
+The private preview needs `test-support` on both `gpui` and `hblank`.
 
-```text
-enable exactly one GPUI backend feature
-```
-
-For crates.io GPUI, keep Hblank's default `crates-io-gpui` feature. For Zed GPUI, disable default features and enable `zed-gpui`. The private preview also needs `test-support`.
-
-Read [Crates and GPUI backends](crates.md#selecting-a-gpui-backend) for manifest examples.
+Read [Crates and GPUI backends](crates.md#gpui-backend) for manifest examples.
 
 ## `HblankProps` fails to derive
 

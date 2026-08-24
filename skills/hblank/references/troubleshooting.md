@@ -33,12 +33,10 @@ Fixture files compile as modules of the private preview crate, not as modules of
 - Do not use `crate::...` expecting the host crate.
 - Ensure public host types/functions are actually exported.
 
-## GPUI types or backend features conflict
+## GPUI types conflict
 
-- `enable exactly one GPUI backend feature` means both `crates-io-gpui` and `zed-gpui`, or neither, reached the `hblank` crate.
 - Import fixture GPUI types from `hblank::gpui`; do not mix them with a different GPUI package identity.
-- Compare the host, `hblank`, and `.hblank/Cargo.toml` GPUI source and revision. Crates.io GPUI and Zed Git GPUI types are not interchangeable even when their APIs look alike.
-- Zed-backed previews require `default-features = false` plus `features = ["zed-gpui", "test-support"]` on `hblank`, and a matching direct `gpui` dependency.
+- Compare the host, `hblank`, and `.hblank/Cargo.toml` GPUI source and revision. Different GPUI package identities are not interchangeable even when their APIs look alike.
 
 Fix the dependency graph. Do not add conversion wrappers around mismatched `App`, `Window`, or element types.
 

@@ -52,7 +52,7 @@ Component and fixture macros also capture normalized declaration tokens for the 
 
 The runtime crate is the complete GPUI adapter. It:
 
-- re-exports the selected GPUI crate as `hblank::gpui`
+- re-exports GPUI as `hblank::gpui`
 - collects macro registrations through `inventory`
 - validates and sorts the catalog
 - renders component fixtures, controls, docs, and themes
@@ -60,7 +60,7 @@ The runtime crate is the complete GPUI adapter. It:
 - saves selection, filter, theme, and current-session control values
 - exposes `Rendered<Handle, Content>` and test helpers
 
-Fixture files should import GPUI types from `hblank::gpui`. This keeps their `App`, `Window`, and element types tied to the backend Hblank compiled against.
+Fixture files should import GPUI types from `hblank::gpui`. This keeps their `App`, `Window`, and element types tied to the GPUI crate Hblank compiles against.
 
 ## `hblank-cli`
 
@@ -68,73 +68,30 @@ The CLI crate builds the `hblank` executable. It does not render components itse
 
 Read the [CLI reference](cli.md) for command behavior.
 
-## Selecting a GPUI backend
+## GPUI backend
 
-The `hblank` runtime requires exactly one backend feature.
-
-| Feature | Backend |
-|---|---|
-| `crates-io-gpui` | GPUI 0.2.2 from crates.io. Enabled by default |
-| `zed-gpui` | GPUI and `gpui_platform` from the pinned Zed Git revision |
-
-Enabling both or neither fails at compile time with:
-
-```text
-enable exactly one GPUI backend feature
-```
-
-### Crates.io GPUI
+Hblank uses GPUI 0.2.2 from crates.io and re-exports it as `hblank::gpui`.
 
 For a normal host dependency:
 
 ```toml
 [dependencies]
 gpui = "0.2.2"
-hblank = { path = "/path/to/hblank/crates/hblank" }
+hblank = "0.4.0"
 ```
 
-Fresh `hblank init` output uses this backend and enables `test-support` in the private preview:
+Fresh `hblank init` output enables `test-support` in the private preview:
 
 ```toml
 [dependencies]
 gpui = { version = "0.2.2", features = ["test-support"] }
-hblank = { path = "/path/to/hblank/crates/hblank", features = ["test-support"] }
+hblank = { version = "0.4.0", features = ["test-support"] }
 hblank_project = { package = "your-package", path = ".." }
 ```
 
-### Zed GPUI
+The host, runtime, and preview must resolve GPUI to the same package identity. Fix the dependency graph instead of adding conversions between `App`, `Window`, or elements.
 
-Disable Hblank's default backend and enable `zed-gpui`:
-
-```toml
-[dependencies.hblank]
-path = "/path/to/hblank/crates/hblank"
-default-features = false
-features = ["zed-gpui"]
-```
-
-For the private preview, also enable `test-support` and keep a direct dependency named `gpui`:
-
-```toml
-[dependencies]
-hblank_project = { package = "your-package", path = ".." }
-
-[dependencies.hblank]
-path = "/path/to/hblank/crates/hblank"
-default-features = false
-features = ["zed-gpui", "test-support"]
-
-[dependencies.gpui]
-git = "https://github.com/zed-industries/zed"
-rev = "d9ad6aff67e47de43abb270d22de75dd950f1b48"
-features = ["test-support"]
-```
-
-The revision above matches Hblank 0.3.0 source. Check `crates/hblank/Cargo.toml` when using another Hblank revision.
-
-The host, runtime, and preview must resolve GPUI to the same package identity. A crates.io GPUI type and a Zed Git GPUI type are different Rust types even when the APIs have the same names. Fix the dependency graph instead of adding conversions between `App`, `Window`, or elements.
-
-The generated preview main re-exports the selected backend:
+The generated preview main re-exports the backend:
 
 ```rust
 pub use hblank::gpui;

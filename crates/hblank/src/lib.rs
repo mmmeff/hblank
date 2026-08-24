@@ -1,10 +1,5 @@
 //! Isolated GPUI component development.
 
-#[cfg(all(feature = "crates-io-gpui", feature = "zed-gpui"))]
-compile_error!("enable exactly one GPUI backend feature");
-#[cfg(not(any(feature = "crates-io-gpui", feature = "zed-gpui")))]
-compile_error!("enable exactly one GPUI backend feature");
-
 mod docs;
 mod fixture;
 pub mod harness;
@@ -19,10 +14,7 @@ pub use fixture::{
     RegisteredCatalog, RenderComponent, registered_catalog, registered_catalog_listing,
     render_fixture,
 };
-#[cfg(feature = "crates-io-gpui")]
-pub use gpui_crates_io as gpui;
-#[cfg(feature = "zed-gpui")]
-pub use gpui_zed as gpui;
+pub use gpui;
 pub use harness::run_harness;
 pub use hblank_core::{
     CalloutTone, ComponentMetadata, ControlDefinition, ControlError, ControlKind, ControlValue,

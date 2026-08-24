@@ -8,45 +8,38 @@ This guide adds Hblank to an existing GPUI package and opens one component in th
 
 - Rust 1.85 or newer
 - A Rust package with a library target
-- GPUI 0.2.2, or the matching Zed GPUI revision described in [Crates and GPUI backends](crates.md)
+- GPUI 0.2.2
 - Public component types and render functions that the private preview crate can import
-
-Hblank 0.3.0 is on `main`, but crates.io does not yet have the full four-crate release. The commands below use a local checkout.
 
 ## Install the CLI and runtime
 
-Clone Hblank once:
+Install the CLI from crates.io:
 
 ```bash
-git clone https://github.com/mmmeff/hblank.git /path/to/hblank
-cargo install --path /path/to/hblank/crates/hblank-cli
+cargo install hblank-cli
 ```
 
 Add the runtime to the GPUI package that owns your components:
 
 ```bash
 cd /path/to/your-project
-cargo add hblank --path /path/to/hblank/crates/hblank
+cargo add hblank
 ```
 
-Use the same Hblank source in the host package and private preview. Mixing a released runtime with a CLI built from `main` can produce incompatible generated code.
 
 ## Create the private preview crate
 
 Run `hblank init` from the package root:
 
 ```bash
-hblank init --runtime-path /path/to/hblank/crates/hblank
+hblank init
 ```
 
 For a package elsewhere in a workspace:
 
 ```bash
-hblank init \
-  --project crates/ui \
-  --runtime-path /path/to/hblank/crates/hblank
+hblank init --project crates/ui
 ```
-
 Hblank creates these files and refuses to replace any of them if they already exist:
 
 ```text
@@ -60,7 +53,7 @@ Hblank creates these files and refuses to replace any of them if they already ex
 
 The host manifest and source files stay untouched. `.hblank/Cargo.toml` depends on the host package as `hblank_project`, which is the import name used inside fixture files.
 
-The default preview uses crates.io GPUI 0.2.2. Read [Selecting a GPUI backend](crates.md#selecting-a-gpui-backend) before changing the generated manifest for Zed GPUI.
+The preview uses GPUI 0.2.2 from crates.io.
 
 ## Write a component
 

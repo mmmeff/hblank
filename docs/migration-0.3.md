@@ -162,7 +162,7 @@ hblank = { path = "/path/to/hblank/crates/hblank", features = ["test-support"] }
 hblank_project = { package = "your-package", path = ".." }
 ```
 
-Use the same dependency source for `hblank` that the host package uses. If the project uses Zed GPUI, follow [Selecting a GPUI backend](crates.md#selecting-a-gpui-backend) instead.
+Use the same dependency source for `hblank` that the host package uses.
 
 The preview entry point must re-export GPUI:
 

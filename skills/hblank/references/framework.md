@@ -31,18 +31,11 @@ Always confirm these with the checked-out repository; use code truth if a later 
 
 The host package remains the source of production components. The preview crate depends on both `hblank` and the host package under the alias `hblank_project`. Cargo later creates `.hblank/target/`; runtime state lives at `.hblank/state.toml`. Both are ignored by the generated `.hblank/.gitignore`.
 
-## GPUI backend selection
+## GPUI backend
 
-`hblank-core` has no GPUI dependency. The `hblank` adapter requires exactly one backend feature:
+`hblank-core` has no GPUI dependency. The `hblank` adapter uses GPUI 0.2.2 from crates.io and re-exports it as `hblank::gpui`. Fixture files should import GPUI through `hblank::gpui`.
 
-| Feature | Use |
-|---|---|
-| `crates-io-gpui` | Default; GPUI 0.2.2 from crates.io |
-| `zed-gpui` | Zed's Git GPUI plus its platform application bootstrap |
-
-Enabling both or neither fails with `enable exactly one GPUI backend feature`. Fixture files should import GPUI through `hblank::gpui` so their types follow the selected adapter backend.
-
-`hblank init` currently writes a crates.io-GPUI preview manifest with direct `gpui` and `hblank` dependencies using `test-support`. When the host uses Zed GPUI, reconcile `.hblank/Cargo.toml` after initialization: disable Hblank's default features, enable `zed-gpui` and `test-support`, and make the direct `gpui` dependency use the same Git source and revision as the host and Hblank adapter. Different GPUI package identities produce incompatible `App`, `Window`, and element types; never paper over that with conversions.
+`hblank init` writes a preview manifest with direct `gpui` and `hblank` dependencies using `test-support`. The host, `hblank`, and preview must resolve GPUI to the same package identity; never paper over mismatched `App`, `Window`, or element types with conversions.
 
 The generated preview entry point re-exports `hblank::gpui` for macro expansion. Keep the direct `gpui` dependency because `#[gpui::test]` resolves that crate name.
 

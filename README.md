@@ -48,14 +48,16 @@ cargo run -p hblank-cli -- dev --project fixtures/dogfood --fixture-id 'src/fixt
 
 ## Add Hblank to a project
 
-`main` is at 0.3.0, but crates.io does not yet have the complete four-crate release. Install from a checkout for now:
+Install the CLI from crates.io:
 
 ```bash
-# In the Hblank checkout
-cargo install --path crates/hblank-cli
+cargo install hblank-cli
+```
 
-# In your GPUI project
-cargo add hblank --path /path/to/hblank/crates/hblank
+Add the runtime to your GPUI project:
+
+```bash
+cargo add hblank
 hblank init
 hblank dev
 ```
@@ -127,7 +129,7 @@ The [component authoring guide](docs/authoring.md) covers controls, adapters, do
 - [Components and fixtures](docs/authoring.md) covers props, controls, variants, Rustdoc, and custom documentation.
 - [CLI reference](docs/cli.md) documents every command, path rule, and reload behavior.
 - [Testing components](docs/testing.md) covers inline tests, GPUI test contexts, and typed handles.
-- [Crates and GPUI backends](docs/crates.md) explains the four crates and backend feature selection.
+- [Crates and GPUI backends](docs/crates.md) explains the four crates and the GPUI backend.
 - [Troubleshooting](docs/troubleshooting.md) starts with the common discovery, build, control, theme, and test failures.
 - [Migrating to 0.3](docs/migration-0.3.md) moves old fixtures to the component and variant model.
 - [Releasing](docs/releasing.md) documents the semantic-release and crates.io publishing setup.
