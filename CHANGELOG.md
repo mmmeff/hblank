@@ -1,3 +1,22 @@
+# [0.3.0](https://github.com/mmmeff/hblank/compare/v0.2.0...v0.3.0) (2026-08-24)
+
+
+### Features
+
+* add canonical fixture launch ([7fc1c2a](https://github.com/mmmeff/hblank/commit/7fc1c2aa3b0889d308a429a74139f361a567aa76))
+* add component-first catalog ([70eb835](https://github.com/mmmeff/hblank/commit/70eb835f107c3fe5e71a93249d110b020f74a35c))
+* add first-class component fixtures ([b490df6](https://github.com/mmmeff/hblank/commit/b490df66bb2572f9484e30ff5b0f314eeaa23884))
+* add generated fixture tests ([ec466a4](https://github.com/mmmeff/hblank/commit/ec466a42e12b9c0158e8bdd26ed1c3184bcb0914))
+* add system theme switching ([390484e](https://github.com/mmmeff/hblank/commit/390484e3146a451324024969692ebfb4cf524dc7))
+* add typed component docs ([7072654](https://github.com/mmmeff/hblank/commit/7072654bc1d8bb7371cc389831111d803a7c569f))
+* capture component declarations ([def64a3](https://github.com/mmmeff/hblank/commit/def64a33e732ef97c4d9e4dd191b43fdd0f4f2d2))
+* deepen generated controls ([c12e1a5](https://github.com/mmmeff/hblank/commit/c12e1a5ee586348df7b26d3f8d9ead78ad12b5ef))
+* expose typed GPUI test handles ([142e1de](https://github.com/mmmeff/hblank/commit/142e1de113eae62ca54682c6331cc515a88bdcd0))
+* extract framework-neutral core ([0ba6635](https://github.com/mmmeff/hblank/commit/0ba66354ec650a91854896022554e85c49573e9c))
+* preserve controls across rebuilds ([24846bb](https://github.com/mmmeff/hblank/commit/24846bb80e32d1b5c28e0cef557e4348c0f92b46))
+* support custom native doc blocks ([51bfc7b](https://github.com/mmmeff/hblank/commit/51bfc7ba0be2a968d09fb7faf309bddd9c696bfc))
+* support domain control adapters ([270f44c](https://github.com/mmmeff/hblank/commit/270f44c9f04da81e397393d9557bf8861d983deb))
+
 # [0.2.0](https://github.com/mmmeff/hblank/compare/v0.1.1...v0.2.0) (2026-08-24)
 
 

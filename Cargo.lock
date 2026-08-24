@@ -3425,7 +3425,7 @@ checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 
 [[package]]
 name = "hblank"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "gpui 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "gpui 0.2.2 (git+https://github.com/zed-industries/zed?rev=d9ad6aff67e47de43abb270d22de75dd950f1b48)",
@@ -3439,7 +3439,7 @@ dependencies = [
 
 [[package]]
 name = "hblank-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -3454,7 +3454,7 @@ dependencies = [
 
 [[package]]
 name = "hblank-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde",
  "thiserror 2.0.20",
@@ -3462,7 +3462,7 @@ dependencies = [
 
 [[package]]
 name = "hblank-dogfood"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "gpui 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "hblank",
@@ -3470,7 +3470,7 @@ dependencies = [
 
 [[package]]
 name = "hblank-macros"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "proc-macro2",
  "quote",
