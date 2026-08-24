@@ -108,8 +108,16 @@ jobs:
 
       - name: Publish missing GitHub releases
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: bash scripts/publish-github-releases.sh
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          output_file="$(mktemp)"
+          if ! bash scripts/publish-github-releases.sh >"$output_file" 2>&1; then
+            message="$(tr '\r\n' '  ' <"$output_file")"
+            echo "::error title=GitHub release recovery failed::$message"
+            cat "$output_file"
+            exit 1
+          fi
+          cat "$output_file"
 
       - name: Run semantic-release
         env:
