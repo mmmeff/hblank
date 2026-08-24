@@ -184,7 +184,7 @@ finish() {
 # Replace the example below. Set TOTAL_STAGES to match the stages you write.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=7
+TOTAL_STAGES=8
 REPOSITORY="mmmeff/hblank"
 WORKFLOW="release.yml"
 
@@ -217,6 +217,12 @@ if [[ "$(gh secret list --repo "$REPOSITORY" --json name --jq 'any(.name == "CAR
   exit 1
 fi
 note "GitHub secret CARGO_REGISTRY_TOKEN is ready."
+
+stage "Grant release workflow write access"
+open_url "https://github.com/$REPOSITORY/settings/actions"
+step "Under Workflow permissions, select Read and write permissions."
+step "Save the change."
+pause "Press Enter after the permission is saved."
 
 stage "Pre-1.0 baseline tag"
 say "semantic-release starts at 1.0.0 without history. A v0.0.0 tag on the root commit makes the existing feat commit release 0.1.0."
