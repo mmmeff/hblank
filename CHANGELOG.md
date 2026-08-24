@@ -1,3 +1,10 @@
+# [0.2.0](https://github.com/mmmeff/hblank/compare/v0.1.1...v0.2.0) (2026-08-24)
+
+
+### Features
+
+* support selectable GPUI backends ([11a432b](https://github.com/mmmeff/hblank/commit/11a432b43a808b5584df9d97e991c224cefd15c4))
+
 ## [0.1.1](https://github.com/mmmeff/hblank/compare/v0.1.0...v0.1.1) (2026-08-24)
 
 
