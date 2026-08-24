@@ -13,8 +13,8 @@ test-support = ["gpui/test-support"]
 
 [dependencies]
 gpui.workspace = true
-hblank-core = { path = "../hblank-core", version = "0.4.0" }
-hblank-macros = { path = "../hblank-macros", version = "0.4.0" }
+hblank-core = { path = "../hblank-core", version = "0.4.1" }
+hblank-macros = { path = "../hblank-macros", version = "0.4.1" }
 inventory.workspace = true
 serde.workspace = true
 toml.workspace = true

@@ -1,3 +1,10 @@
+## [0.4.1](https://github.com/mmmeff/hblank/compare/v0.4.0...v0.4.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* **release:** recover incomplete crate publishing ([c28ed50](https://github.com/mmmeff/hblank/commit/c28ed50151676f2d6037955c689db811f1e27b75))
+
 # [0.4.0](https://github.com/mmmeff/hblank/compare/v0.3.0...v0.4.0) (2026-08-24)
 
 
