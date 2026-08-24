@@ -227,7 +227,7 @@ pause "Press Enter after the permission is saved."
 stage "Authorize GitHub release publishing"
 open_url "https://github.com/settings/personal-access-tokens/new"
 step "Create a fine-grained token scoped only to the hblank repository."
-step "Set Contents permission to Read and write."
+step "Set Contents and Workflows permissions to Read and write."
 ask_secret GITHUB_RELEASE_TOKEN "Paste the GitHub release token:"
 if [[ -z "$GITHUB_RELEASE_TOKEN" ]]; then
   warn "The GitHub release token cannot be empty."

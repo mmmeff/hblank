@@ -38,7 +38,7 @@ The job:
 
 GitHub must allow workflow write access. In repository Settings, open Actions, then General. Under Workflow permissions, select `Read and write permissions`. The workflow uses `GH_RELEASE_TOKEN` when it is set. Otherwise, it uses the built-in `GITHUB_TOKEN`.
 
-If the built-in token returns `Resource not accessible by integration` when it creates a GitHub Release, create a fine-grained token scoped only to `mmmeff/hblank` with Contents `Read and write`. Save it as the `GH_RELEASE_TOKEN` repository secret.
+If the built-in token returns `Resource not accessible by integration` when it creates a GitHub Release, create a fine-grained token scoped only to `mmmeff/hblank` with Contents and Workflows `Read and write`. GitHub requires Workflows write access when the release tag includes a workflow-file change. Save the token as the `GH_RELEASE_TOKEN` repository secret.
 
 Semantic-release then:
 
@@ -108,7 +108,7 @@ The wizard has nine stages:
 1. create a temporary crates.io token with publish-new and publish-update permissions
 2. save it as the `CARGO_REGISTRY_TOKEN` GitHub secret
 3. allow GitHub Actions workflows to write repository contents
-4. create a GitHub release token with Contents read and write
+4. create a GitHub release token with Contents and Workflows read and write
 5. create or verify the `v0.0.0` baseline tag
 6. dispatch the first automated release
 7. add `release.yml` as a Trusted Publisher for each of the four crates
