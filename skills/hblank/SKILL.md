@@ -163,7 +163,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 ```
 
-Also run the narrow command that builds the changed preview and exercise the fixture in the GPUI harness. Keep generated files, host tests, docs, and fixture registration consistent.
+Run `hblank test --project PATH` when fixture files contain explicit inline `#[test]` or `#[gpui::test]` modules; use `--filter` for one test name. Hblank regenerates the preview target and delegates execution/output to Cargo—it does not auto-test every fixture. Also run the narrow command that builds the changed preview and exercise the fixture in the GPUI harness. Keep generated files, host tests, docs, and fixture registration consistent.
 
 **Complete when:** command gates pass and direct harness evidence covers discovery, controls, docs, navigation, and reload behavior.
 
@@ -182,6 +182,7 @@ Also run the narrow command that builds the changed preview and exercise the fix
 - Read [references/framework.md](references/framework.md) when changing configuration, discovery, macros, registration, preview startup, or hot reload.
 - Read [references/component-fixtures.md](references/component-fixtures.md) when creating props, enums, components, fixture adapters, or fixture functions.
 - Read [references/troubleshooting.md](references/troubleshooting.md) when discovery, compilation, controls, docs, direct fixture launch, or reload fails.
+
 
 
 

@@ -159,10 +159,13 @@ fn local_source_runtime_path() -> Option<PathBuf> {
 
 fn runtime_dependency(path: Option<&Path>) -> String {
     path.map_or_else(
-        || toml::Value::String(format!("={}", env!("CARGO_PKG_VERSION"))).to_string(),
+        || {
+            let version = toml::Value::String(format!("={}", env!("CARGO_PKG_VERSION")));
+            format!("{{ version = {version}, features = [\"test-support\"] }}")
+        },
         |path| {
             let path = toml::Value::String(path.to_string_lossy().into_owned());
-            format!("{{ path = {path} }}")
+            format!("{{ path = {path}, features = [\"test-support\"] }}")
         },
     )
 }

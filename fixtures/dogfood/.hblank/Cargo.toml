@@ -7,5 +7,5 @@ publish = false
 [workspace]
 
 [dependencies]
-hblank = { path = "../../../crates/hblank" }
+hblank = { path = "../../../crates/hblank", features = ["test-support"] }
 hblank_project = { package = "hblank-dogfood", path = ".." }

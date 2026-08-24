@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use hblank_cli::{DevOptions, InitOptions, initialize, run_dev};
+use hblank_cli::{DevOptions, InitOptions, TestOptions, initialize, run_dev, run_tests};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -52,6 +52,15 @@ USAGE:
         #[arg(long, value_name = "PATH")]
         fixture: Option<PathBuf>,
     },
+    /// Run explicit inline Rust tests from the generated Hblank preview target.
+    Test {
+        /// Initialized Rust package root whose fixture tests should run.
+        #[arg(long, default_value = ".")]
+        project: PathBuf,
+        /// Optional Cargo test-name filter.
+        #[arg(long, value_name = "FILTER")]
+        filter: Option<String>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -74,6 +83,11 @@ fn main() -> Result<()> {
             options.fixture = fixture;
             run_dev(&options)?;
         }
+        Command::Test { project, filter } => {
+            let mut options = TestOptions::new(project);
+            options.filter = filter;
+            run_tests(&options)?;
+        }
     }
     Ok(())
 }
@@ -95,6 +109,21 @@ mod tests {
 
         assert!(help.contains("hblank dev --fixture src/button.hblank.rs"));
         assert!(help.contains("Run 'hblank dev --help'"));
+    }
+
+    #[test]
+    fn test_help_documents_generated_cargo_target() {
+        let mut command = Cli::command();
+        let test = command
+            .find_subcommand_mut("test")
+            .expect("test subcommand should exist");
+        let mut output = Vec::new();
+        test.write_long_help(&mut output)
+            .expect("test help should render");
+        let help = String::from_utf8(output).expect("help should be UTF-8");
+
+        assert!(help.contains("explicit inline Rust tests"));
+        assert!(help.contains("--filter <FILTER>"));
     }
 
     #[test]

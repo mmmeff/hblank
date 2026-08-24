@@ -277,6 +277,8 @@ The hook receives both the selected System/Light/Dark mode and its resolved Ligh
 ```bash
 hblank dev
 hblank dev --fixture src/badge.hblank.rs
+hblank test
+hblank test --filter fixture_card_default_and_docs_are_explicit
 ```
 
 `--fixture` opens directly to the first registered fixture in that source file. Relative paths resolve from `--project`; absolute paths work too. If a file contains multiple fixtures, Hblank chooses the first in deterministic navigation order.
@@ -312,6 +314,9 @@ hblank init [--project PATH] [--runtime-path PATH]
 
 hblank dev [--project PATH] [--fixture PATH]
     Discover fixture files, optionally select a fixture path, launch the GPUI harness, and watch for changes.
+
+hblank test [--project PATH] [--filter FILTER]
+    Regenerate the private preview target and run only explicitly authored inline Rust tests with Cargo.
 ```
 
 ## Releases
@@ -334,6 +339,7 @@ After setup, releases require no crates.io secret in GitHub.
 ## Project status
 
 Hblank is pre-1.0 and currently targets GPUI `0.2.2`. The core workflow is implemented and dogfooded: initialization, glob discovery, typed controls, Rustdoc extraction, GPUI navigation, and supervised hot reload.
+
 
 
 

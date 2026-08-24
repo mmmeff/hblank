@@ -12,6 +12,7 @@ readme.workspace = true
 default = ["crates-io-gpui"]
 crates-io-gpui = ["dep:gpui-crates-io"]
 zed-gpui = ["dep:gpui-zed", "dep:gpui-platform-zed"]
+test-support = ["gpui-crates-io?/test-support", "gpui-zed?/test-support"]
 
 [dependencies]
 gpui-crates-io = { package = "gpui", version = "0.2.2", optional = true }

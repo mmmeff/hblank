@@ -84,6 +84,12 @@ The GPUI harness owns selection, filtering, active inspector tab, editing target
 
 Selection and filter persist in `.hblank/state.toml`. The CLI assigns one `HBLANK_SESSION_ID` to every preview process it supervises. Non-default control values are serialized by canonical fixture/control id and reapplied only when that session id matches, so successful rebuilds retain live work while a new `hblank dev` starts from source defaults. Stale or invalid values are ignored. `hblank dev --fixture PATH` still gives the requested source priority only for the first preview process.
 
+## Fixture tests
+
+`hblank init` enables the GPUI `test-support` feature in the private preview dependency. `hblank test` refreshes discovered imports and invokes ordinary `cargo test` against that generated manifest/target directory. Inline `#[cfg(test)]` modules in discovered fixture files therefore run in the same crate graph as the harness; `--filter` passes one Cargo test-name filter.
+
+Hblank does not auto-generate smoke tests, define assertions, or replace Cargo output. Only explicitly authored Rust/GPUI tests run.
+
 ## Reload lifecycle
 
 The CLI watches project Rust files, manifests, lockfiles, and Hblank config while excluding targets, Git state, generated imports, and Hblank runtime state.
@@ -98,6 +104,7 @@ On relevant content change:
 6. stop the old preview after replacement is ready.
 
 A failed build leaves the old preview alive. Hblank deliberately avoids unstable Rust dynamic-library ABIs.
+
 
 
 

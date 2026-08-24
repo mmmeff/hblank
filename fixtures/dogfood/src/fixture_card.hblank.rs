@@ -56,3 +56,17 @@ fn adoption_note(context: &hblank::DocContext<'_>, payload: &str) -> hblank::gpu
         .into_any_element()
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fixture_card_default_and_docs_are_explicit() {
+        let props = fixture_card_default();
+        assert_eq!(props.count, 3);
+        assert!(props.active);
+        assert_eq!(fixture_card_docs().blocks().len(), 8);
+    }
+}
+
