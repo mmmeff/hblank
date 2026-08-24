@@ -202,7 +202,7 @@ fn badge_docs() -> hblank::DocPage {
 }
 ```
 
-`fixture_ref!` resolves through the generated fixture registration, so a renamed fixture fails at compile time instead of leaving a stale string. Components without a custom page receive generated Rustdoc, props, live controls, and source blocks.
+`fixture_ref!` resolves through the generated fixture registration, so a renamed fixture fails at compile time instead of leaving a stale string. Components without a custom page receive generated Rustdoc, props, live controls, and source blocks. Source blocks contain normalized tokens captured by the component/fixture attribute macros plus project-relative path and line; doc comments survive tokenization, while original formatting and ordinary comments do not.
 
 ## Custom native doc blocks
 
@@ -236,6 +236,7 @@ Register one `#[hblank::component]` renderer, then add any number of zero-argume
 - Props field doc comments explain controls.
 - Production component docs remain on the production function/type.
 - Do not duplicate long prose in Hblank-specific files when the production docs already answer the user’s question; fixture docs should explain the showcased state.
+
 
 
 

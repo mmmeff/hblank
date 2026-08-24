@@ -579,10 +579,9 @@ impl HarnessApp {
                 self.fixtures[fixture_index].props().definitions(),
             ));
             blocks.push(self.render_doc_controls(fixture_index, control_handler));
-            blocks.push(doc_source(source_label(
-                component.metadata().source,
-                component.metadata().line,
-            )));
+            blocks.push(doc_source(
+                self.declaration_source(component, fixture_index),
+            ));
             return blocks;
         }
 
@@ -633,10 +632,7 @@ impl HarnessApp {
                 ),
             DocBlock::Props => doc_props(self.fixtures[fixture_index].props().definitions()),
             DocBlock::Controls => self.render_doc_controls(fixture_index, control_handler),
-            DocBlock::Source => doc_source(source_label(
-                self.fixtures[fixture_index].metadata().source,
-                self.fixtures[fixture_index].metadata().line,
-            )),
+            DocBlock::Source => doc_source(self.declaration_source(component, fixture_index)),
             DocBlock::Callout { tone, title, body } => {
                 doc_callout(*tone, title.clone(), body.clone())
             }
@@ -669,6 +665,18 @@ impl HarnessApp {
                 )
             }
         }
+    }
+
+    fn declaration_source(&self, component: &ComponentDefinition, fixture_index: usize) -> String {
+        let component_metadata = component.metadata();
+        let fixture_metadata = self.fixtures[fixture_index].metadata();
+        format!(
+            "// {}\n{}\n\n// {}\n{}",
+            source_label(component_metadata.source, component_metadata.line),
+            component_metadata.declaration,
+            source_label(fixture_metadata.source, fixture_metadata.line),
+            fixture_metadata.declaration,
+        )
     }
 
     fn render_doc_controls(

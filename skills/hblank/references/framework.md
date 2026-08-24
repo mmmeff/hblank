@@ -70,7 +70,7 @@ The runtime joins components and variants, rejects duplicate canonical ids, unkn
 
 `ComponentDefinition` owns a framework-neutral `DocPage`. The optional `docs = path` component attribute calls a typed Rust builder; `DocBlock` supports heading, prose, fixture, props, controls, callout, and source blocks in declared order. `fixture_ref!` rewrites a fixture function path to its generated canonical-id helper at compile time.
 
-The GPUI adapter renders fixture blocks as live canvases, props as generated metadata, and controls through the same mutation handlers as the inspector. Components without an authored page receive generated Rustdoc, props, controls, and source blocks. `#[hblank::doc_block]` registers a GPUI renderer under its Rust module path; `custom_doc!` resolves that path at compile time and stores a string payload. Renderers receive only read-only `DocContext` metadata and cannot access harness navigation, controls, or persistence.
+The GPUI adapter renders fixture blocks as live canvases, props as generated metadata, and controls through the same mutation handlers as the inspector. Components without an authored page receive generated Rustdoc, props, controls, and source blocks. Component and fixture macros capture normalized declaration tokens in registry metadata; Source renders both declarations with project-relative locations, not runtime file parsing. `#[hblank::doc_block]` registers a GPUI renderer under its Rust module path; `custom_doc!` resolves that path at compile time and stores a string payload. Renderers receive only read-only `DocContext` metadata and cannot access harness navigation, controls, or persistence.
 
 ## Themes
 
@@ -98,6 +98,7 @@ On relevant content change:
 6. stop the old preview after replacement is ready.
 
 A failed build leaves the old preview alive. Hblank deliberately avoids unstable Rust dynamic-library ABIs.
+
 
 
 

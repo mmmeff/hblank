@@ -268,6 +268,14 @@ fn captures_fixture_rustdoc_and_source_metadata() {
         component.metadata().docs,
         "A presentational component used to verify generated documentation."
     );
+    assert!(component.metadata().declaration.contains("fn demo"));
+    assert!(
+        component
+            .metadata()
+            .declaration
+            .contains("props.label.clone()")
+    );
+    assert!(fixture.metadata().declaration.contains("fn demo_default"));
     assert_eq!(component.docs().blocks().len(), 6);
     assert!(hblank::registered_doc_block("contracts::demo_custom_block").is_some());
     assert_eq!(

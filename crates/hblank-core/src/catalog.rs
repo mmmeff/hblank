@@ -15,6 +15,7 @@ pub struct ComponentMetadata {
     pub title: &'static str,
     pub group: &'static str,
     pub docs: &'static str,
+    pub declaration: &'static str,
     pub source: &'static str,
     pub line: u32,
 }
@@ -67,6 +68,7 @@ pub struct FixtureMetadata {
     pub group: &'static str,
     pub title: &'static str,
     pub docs: &'static str,
+    pub declaration: &'static str,
     pub source: &'static str,
     pub line: u32,
 }
@@ -75,6 +77,7 @@ pub struct FixtureRegistrationMetadata {
     pub id: String,
     pub title: &'static str,
     pub docs: &'static str,
+    pub declaration: &'static str,
     pub source: &'static str,
     pub line: u32,
 }
@@ -261,6 +264,7 @@ pub fn assemble_catalog<Renderer: Copy>(
                 group: component.metadata.group,
                 title: registration.metadata.title,
                 docs: registration.metadata.docs,
+                declaration: registration.metadata.declaration,
                 source: registration.metadata.source,
                 line: registration.metadata.line,
             },
@@ -362,6 +366,7 @@ mod tests {
                 title: "Card",
                 group: "Components",
                 docs: "A card.",
+                declaration: "fn card(...) { ... }",
                 source: "src/card.rs",
                 line: 10,
             },
@@ -375,6 +380,7 @@ mod tests {
                 id: "src/card.rs#default".to_owned(),
                 title: "Default",
                 docs: "",
+                declaration: "fn default() -> Props { ... }",
                 source: "src/card.rs",
                 line: 20,
             },
