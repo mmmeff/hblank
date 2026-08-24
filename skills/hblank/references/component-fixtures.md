@@ -204,6 +204,27 @@ fn badge_docs() -> hblank::DocPage {
 
 `fixture_ref!` resolves through the generated fixture registration, so a renamed fixture fails at compile time instead of leaving a stale string. Components without a custom page receive generated Rustdoc, props, live controls, and source blocks.
 
+## Custom native doc blocks
+
+Use a custom block only when the built-in heading, prose, fixture, props, controls, callout, and source blocks cannot express a project-specific visualization:
+
+```rust
+#[hblank::doc_block]
+fn token_sample(context: &hblank::DocContext<'_>, payload: &str) -> hblank::gpui::AnyElement {
+    div()
+        .child(format!("{}: {payload}", context.component_title))
+        .into_any_element()
+}
+
+fn button_docs() -> hblank::DocPage {
+    hblank::DocPage::new([
+        hblank::custom_doc!(token_sample, "spacing/medium"),
+    ])
+}
+```
+
+`DocContext` is read-only catalog metadata: component/fixture ids and titles, selected theme mode, and resolved appearance. The renderer returns one native GPUI element and receives no harness entity, control mutation interface, navigation callback, or persistence access.
+
 ## Multiple variants in one file
 
 Register one `#[hblank::component]` renderer, then add any number of zero-argument `#[hblank::fixture(component = renderer, title = "…")]` factories returning the same props type. Canonical component and fixture ids derive from source path plus function symbol. The harness groups by component and nests variants in title/id order; source-path launch selects the first variant in that hierarchy.
@@ -215,6 +236,7 @@ Register one `#[hblank::component]` renderer, then add any number of zero-argume
 - Props field doc comments explain controls.
 - Production component docs remain on the production function/type.
 - Do not duplicate long prose in Hblank-specific files when the production docs already answer the user’s question; fixture docs should explain the showcased state.
+
 
 
 

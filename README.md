@@ -209,7 +209,7 @@ fn badge_docs() -> DocPage {
 }
 ```
 
-One component owns one props schema, renderer, and optional typed `DocPage`. `DocBlock` values compose headings, prose, live fixture canvases, generated props, interactive controls, callouts, and source context without a second markup language. Fixture factories provide named default states. The sidebar groups components first and nests their variants; selecting a component opens its first visible variant. Component Rustdoc is the generated catalog description, while optional fixture Rustdoc adds variant-specific notes.
+One component owns one props schema, renderer, and optional typed `DocPage`. `DocBlock` values compose headings, prose, live fixture canvases, generated props, interactive controls, callouts, and source context without a second markup language. Projects can add a stable native extension with `#[hblank::doc_block]`; `hblank::custom_doc!(renderer, payload)` embeds it with a read-only `DocContext` containing component, fixture, and resolved theme metadata. Fixture factories provide named default states. The sidebar groups components first and nests their variants; selecting a component opens its first visible variant. Component Rustdoc is the generated catalog description, while optional fixture Rustdoc adds variant-specific notes.
 
 Save the file while `hblank dev` is running. The harness discovers it, rebuilds the private preview crate, and adds **Badge** to navigation without restarting the command.
 
@@ -334,6 +334,7 @@ After setup, releases require no crates.io secret in GitHub.
 ## Project status
 
 Hblank is pre-1.0 and currently targets GPUI `0.2.2`. The core workflow is implemented and dogfooded: initialization, glob discovery, typed controls, Rustdoc extraction, GPUI navigation, and supervised hot reload.
+
 
 
 

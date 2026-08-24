@@ -1,7 +1,7 @@
 use hblank::gpui::{App, IntoElement, ParentElement, Window, div};
 use hblank::{
-    ControlError, ControlKind, ControlValue, DocBlock, DocPage, HblankControlAdapter, HblankEnum,
-    HblankProps, NumberConstraints, TextMode, component, fixture, registered_catalog,
+    ControlError, ControlKind, ControlValue, DocBlock, DocContext, DocPage, HblankControlAdapter,
+    HblankEnum, HblankProps, NumberConstraints, TextMode, component, fixture, registered_catalog,
 };
 
 #[derive(Clone, Default, HblankEnum)]
@@ -69,12 +69,20 @@ fn demo_alternate() -> DemoProps {
     }
 }
 
+#[hblank::doc_block]
+fn demo_custom_block(context: &DocContext<'_>, payload: &str) -> hblank::gpui::AnyElement {
+    div()
+        .child(format!("{}: {payload}", context.component_title))
+        .into_any_element()
+}
+
 fn demo_docs() -> DocPage {
     DocPage::new([
         DocBlock::heading(1, "Demo"),
         DocBlock::fixture(hblank::fixture_ref!(demo_default)),
         DocBlock::props(),
         DocBlock::controls(),
+        hblank::custom_doc!(demo_custom_block, "custom payload"),
         DocBlock::source(),
     ])
 }
@@ -260,7 +268,8 @@ fn captures_fixture_rustdoc_and_source_metadata() {
         component.metadata().docs,
         "A presentational component used to verify generated documentation."
     );
-    assert_eq!(component.docs().blocks().len(), 5);
+    assert_eq!(component.docs().blocks().len(), 6);
+    assert!(hblank::registered_doc_block("contracts::demo_custom_block").is_some());
     assert_eq!(
         component.docs().blocks()[1],
         DocBlock::Fixture {

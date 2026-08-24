@@ -23,6 +23,10 @@ pub enum DocBlock {
         title: String,
         body: String,
     },
+    Custom {
+        id: String,
+        payload: String,
+    },
 }
 
 impl DocBlock {
@@ -57,6 +61,14 @@ impl DocBlock {
     #[must_use]
     pub const fn source() -> Self {
         Self::Source
+    }
+
+    #[must_use]
+    pub fn custom(id: impl Into<String>, payload: impl Into<String>) -> Self {
+        Self::Custom {
+            id: id.into(),
+            payload: payload.into(),
+        }
     }
 
     #[must_use]
@@ -105,9 +117,10 @@ mod tests {
             DocBlock::props(),
             DocBlock::controls(),
             DocBlock::source(),
+            DocBlock::custom("project::tokens", "spacing"),
         ]);
 
-        assert_eq!(page.blocks().len(), 5);
+        assert_eq!(page.blocks().len(), 6);
         assert_eq!(
             page.blocks()[0],
             DocBlock::Heading {

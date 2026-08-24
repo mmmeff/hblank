@@ -4,7 +4,9 @@ use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
     Attribute, Data, DeriveInput, Error, Expr, ExprLit, Fields, FnArg, ItemFn, Lit, LitStr, Meta,
-    Path, Type, parse_macro_input,
+    Path, Type,
+    parse::{Parse, ParseStream},
+    parse_macro_input,
 };
 
 #[proc_macro_derive(HblankProps, attributes(hblank))]
@@ -250,6 +252,65 @@ fn expand_component(
     })
 }
 
+struct CustomDocInput {
+    renderer: Path,
+    payload: Expr,
+}
+
+impl Parse for CustomDocInput {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let renderer = input.parse()?;
+        input.parse::<syn::Token![,]>()?;
+        let payload = input.parse()?;
+        Ok(Self { renderer, payload })
+    }
+}
+
+#[proc_macro_attribute]
+pub fn doc_block(args: TokenStream, input: TokenStream) -> TokenStream {
+    if !args.is_empty() {
+        return Error::new(
+            proc_macro2::Span::call_site(),
+            "Hblank custom doc blocks take no attributes",
+        )
+        .into_compile_error()
+        .into();
+    }
+    let function = parse_macro_input!(input as ItemFn);
+    let function_name = &function.sig.ident;
+    let module_name = format_ident!("__hblank_doc_block_{}", function_name);
+    quote! {
+        #function
+
+        #[doc(hidden)]
+        pub(crate) mod #module_name {
+            pub(crate) fn id() -> ::std::string::String {
+                concat!(module_path!(), "::", stringify!(#function_name)).to_owned()
+            }
+
+            pub(crate) const RENDER: ::hblank::CustomDocRenderer = super::#function_name;
+        }
+
+        ::hblank::__private::inventory::submit! {
+            ::hblank::CustomDocBlockRegistration {
+                id: concat!(module_path!(), "::", stringify!(#function_name)),
+                render: #module_name::RENDER,
+            }
+        }
+    }
+    .into()
+}
+
+#[proc_macro]
+pub fn custom_doc(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as CustomDocInput);
+    let payload = input.payload;
+    match doc_block_module_path(&input.renderer) {
+        Ok(module) => quote!(::hblank::DocBlock::custom(#module::id(), #payload)).into(),
+        Err(error) => error.into_compile_error().into(),
+    }
+}
+
 #[proc_macro_attribute]
 pub fn theme_hook(args: TokenStream, input: TokenStream) -> TokenStream {
     if !args.is_empty() {
@@ -415,6 +476,18 @@ fn render_props_type<'a>(function: &'a ItemFn, subject: &str) -> syn::Result<&'a
         ));
     }
     Ok(props_reference.elem.as_ref())
+}
+
+fn doc_block_module_path(renderer: &Path) -> syn::Result<Path> {
+    let mut module = renderer.clone();
+    let Some(last) = module.segments.last_mut() else {
+        return Err(Error::new_spanned(
+            renderer,
+            "doc block renderer path cannot be empty",
+        ));
+    };
+    last.ident = format_ident!("__hblank_doc_block_{}", last.ident);
+    Ok(module)
 }
 
 fn fixture_module_path(fixture: &Path) -> syn::Result<Path> {

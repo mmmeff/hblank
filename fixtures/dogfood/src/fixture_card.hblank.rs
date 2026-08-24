@@ -1,5 +1,5 @@
 use hblank::{CalloutTone, DocBlock, DocPage};
-use hblank::gpui::{App, IntoElement, Window};
+use hblank::gpui::{App, IntoElement, Window, div, prelude::*, rgb};
 use hblank_project::{FixtureCardProps, fixture_card};
 
 #[hblank::component(
@@ -34,7 +34,25 @@ fn fixture_card_docs() -> DocPage {
             "Dogfooded",
             "This component verifies the same catalog, controls, and theme path users consume.",
         ),
+        hblank::custom_doc!(adoption_note, "Ready for project-specific documentation"),
         DocBlock::source(),
     ])
+}
+
+
+#[hblank::doc_block]
+fn adoption_note(context: &hblank::DocContext<'_>, payload: &str) -> hblank::gpui::AnyElement {
+    let accent = match context.resolved_theme {
+        hblank::ResolvedTheme::Light => 0x3e2b86,
+        hblank::ResolvedTheme::Dark => 0xddd5ff,
+    };
+    div()
+        .p_4()
+        .rounded_lg()
+        .border_1()
+        .border_color(rgb(accent))
+        .text_color(rgb(accent))
+        .child(format!("{}: {payload}", context.component_title))
+        .into_any_element()
 }
 

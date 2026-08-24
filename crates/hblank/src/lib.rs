@@ -5,10 +5,12 @@ compile_error!("enable exactly one GPUI backend feature");
 #[cfg(not(any(feature = "crates-io-gpui", feature = "zed-gpui")))]
 compile_error!("enable exactly one GPUI backend feature");
 
+mod docs;
 mod fixture;
 pub mod harness;
 mod theme;
 
+pub use docs::{CustomDocBlockRegistration, CustomDocRenderer, DocContext, registered_doc_block};
 pub use fixture::{
     ComponentDefinition, ComponentRegistration, FixtureDefinition, FixtureRegistration,
     RegisteredCatalog, RenderComponent, registered_catalog, render_fixture,
@@ -24,7 +26,9 @@ pub use hblank_core::{
     HblankControlAdapter, HblankEnum, HblankProps, NumberConstraints, RegistryError, ResolvedTheme,
     TextMode, ThemeMode, canonical_source_id,
 };
-pub use hblank_macros::{HblankEnum, HblankProps, component, fixture, fixture_ref, theme_hook};
+pub use hblank_macros::{
+    HblankEnum, HblankProps, component, custom_doc, doc_block, fixture, fixture_ref, theme_hook,
+};
 pub use theme::{ThemeHook, ThemeHookRegistration, registered_theme_hook};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

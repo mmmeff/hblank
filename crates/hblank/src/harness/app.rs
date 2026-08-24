@@ -18,8 +18,9 @@ use crate::gpui::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ComponentDefinition, ControlKind, ControlValue, DocBlock, FixtureDefinition, ResolvedTheme,
-    TextMode, ThemeHook, ThemeMode, registered_catalog, registered_theme_hook, render_fixture,
+    ComponentDefinition, ControlKind, ControlValue, DocBlock, DocContext, FixtureDefinition,
+    ResolvedTheme, TextMode, ThemeHook, ThemeMode, registered_catalog, registered_doc_block,
+    registered_theme_hook, render_fixture,
 };
 
 use super::components::{
@@ -589,12 +590,15 @@ impl HarnessApp {
             .docs()
             .blocks()
             .iter()
-            .map(|block| self.render_doc_block(block, fixture_index, window, cx, control_handler))
+            .map(|block| {
+                self.render_doc_block(component, block, fixture_index, window, cx, control_handler)
+            })
             .collect()
     }
 
     fn render_doc_block(
         &self,
+        component: &ComponentDefinition,
         block: &DocBlock,
         fixture_index: usize,
         window: &mut Window,
@@ -635,6 +639,34 @@ impl HarnessApp {
             )),
             DocBlock::Callout { tone, title, body } => {
                 doc_callout(*tone, title.clone(), body.clone())
+            }
+            DocBlock::Custom { id, payload } => {
+                let fixture = &self.fixtures[fixture_index];
+                registered_doc_block(id).map_or_else(
+                    || {
+                        doc_callout(
+                            crate::CalloutTone::Warning,
+                            "Missing custom doc block",
+                            format!("No registered renderer matches {id}"),
+                        )
+                    },
+                    |render| {
+                        render(
+                            &DocContext {
+                                component_id: component.metadata().id.as_str(),
+                                component_title: component.metadata().title,
+                                fixture_id: fixture.metadata().id.as_str(),
+                                fixture_title: fixture.metadata().title,
+                                theme_mode: self.theme_mode,
+                                resolved_theme: resolved_theme(
+                                    self.theme_mode,
+                                    window.appearance(),
+                                ),
+                            },
+                            payload,
+                        )
+                    },
+                )
             }
         }
     }
