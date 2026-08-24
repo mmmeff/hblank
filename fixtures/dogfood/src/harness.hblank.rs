@@ -34,7 +34,7 @@ impl Default for HeaderFixtureProps {
     }
 }
 
-#[hblank::fixture(id = "hblank.header", title = "Header", group = "Hblank UI")]
+#[hblank::component(title = "Header", group = "Hblank UI")]
 /// Hblank's compact project identity, fixture count, and live build status surface.
 fn header_fixture(
     props: &HeaderFixtureProps,
@@ -46,6 +46,11 @@ fn header_fixture(
         fixture_count: props.fixture_count as usize,
         status: props.status.clone().into(),
     })
+}
+
+#[hblank::fixture(component = header_fixture, title = "Default")]
+fn header_default() -> HeaderFixtureProps {
+    HeaderFixtureProps::default()
 }
 
 #[derive(Clone, Debug, HblankProps)]
@@ -65,7 +70,7 @@ impl Default for SearchFixtureProps {
     }
 }
 
-#[hblank::fixture(id = "hblank.search", title = "Search", group = "Hblank UI")]
+#[hblank::component(title = "Search", group = "Hblank UI")]
 /// The keyboard-focused fixture filter used above the navigation tree.
 fn search_fixture(
     props: &SearchFixtureProps,
@@ -79,6 +84,11 @@ fn search_fixture(
         },
         noop(),
     )
+}
+
+#[hblank::fixture(component = search_fixture, title = "Default")]
+fn search_default() -> SearchFixtureProps {
+    SearchFixtureProps::default()
 }
 
 #[derive(Clone, Debug, HblankProps)]
@@ -95,26 +105,26 @@ impl Default for NavigationFixtureProps {
     }
 }
 
-#[hblank::fixture(id = "hblank.navigation", title = "Navigation", group = "Hblank UI")]
+#[hblank::component(title = "Navigation", group = "Hblank UI")]
 /// Grouped, filterable navigation for jumping between isolated component fixtures.
 fn navigation_fixture(
     props: &NavigationFixtureProps,
     _window: &mut Window,
     _cx: &mut App,
 ) -> impl IntoElement {
-    static ITEMS: &[NavigationItem] = &[
+    let items = [
         NavigationItem {
-            id: "components.button",
+            id: "components.button".into(),
             title: "Button",
             group: "Components",
         },
         NavigationItem {
-            id: "components.card",
+            id: "components.card".into(),
             title: "Card",
             group: "Components",
         },
         NavigationItem {
-            id: "patterns.empty-state",
+            id: "patterns.empty-state".into(),
             title: "Empty state",
             group: "Patterns",
         },
@@ -122,12 +132,17 @@ fn navigation_fixture(
     let handler = noop();
     navigation(
         NavigationProps {
-            items: ITEMS,
+            items: &items,
             selected: Some("components.button"),
             query: &props.query,
         },
         &handler,
     )
+}
+
+#[hblank::fixture(component = navigation_fixture, title = "Default")]
+fn navigation_default() -> NavigationFixtureProps {
+    NavigationFixtureProps::default()
 }
 
 #[derive(Clone, Copy, Debug, Default, HblankEnum)]
@@ -154,7 +169,7 @@ impl Default for ToolbarFixtureProps {
     }
 }
 
-#[hblank::fixture(id = "hblank.toolbar", title = "Toolbar", group = "Hblank UI")]
+#[hblank::component(title = "Toolbar", group = "Hblank UI")]
 /// Selected-fixture context and inspector tab switcher.
 fn toolbar_fixture(
     props: &ToolbarFixtureProps,
@@ -174,6 +189,11 @@ fn toolbar_fixture(
     )
 }
 
+#[hblank::fixture(component = toolbar_fixture, title = "Default")]
+fn toolbar_default() -> ToolbarFixtureProps {
+    ToolbarFixtureProps::default()
+}
+
 #[derive(Clone, Debug, HblankProps)]
 struct CanvasFixtureProps {
     /// Small context label above the isolated surface.
@@ -188,7 +208,7 @@ impl Default for CanvasFixtureProps {
     }
 }
 
-#[hblank::fixture(id = "hblank.canvas", title = "Canvas", group = "Hblank UI")]
+#[hblank::component(title = "Canvas", group = "Hblank UI")]
 /// The centered, scrollable surface that contains exactly one rendered fixture.
 fn canvas_fixture(
     props: &CanvasFixtureProps,
@@ -211,6 +231,11 @@ fn canvas_fixture(
             .child("Live fixture")
             .into_any_element(),
     )
+}
+
+#[hblank::fixture(component = canvas_fixture, title = "Default")]
+fn canvas_default() -> CanvasFixtureProps {
+    CanvasFixtureProps::default()
 }
 
 #[derive(Clone, Copy, Debug, Default, HblankEnum)]
@@ -243,11 +268,7 @@ impl Default for ControlsFixtureProps {
     }
 }
 
-#[hblank::fixture(
-    id = "hblank.controls-panel",
-    title = "Controls panel",
-    group = "Hblank UI"
-)]
+#[hblank::component(title = "Controls panel", group = "Hblank UI")]
 /// Automatically generated property controls, including field-level Rustdoc.
 fn controls_fixture(
     props: &ControlsFixtureProps,
@@ -262,6 +283,11 @@ fn controls_fixture(
         },
         noop(),
     )
+}
+
+#[hblank::fixture(component = controls_fixture, title = "Default")]
+fn controls_default() -> ControlsFixtureProps {
+    ControlsFixtureProps::default()
 }
 
 #[derive(Clone, Debug, HblankProps)]
@@ -282,7 +308,7 @@ impl Default for DocsFixtureProps {
     }
 }
 
-#[hblank::fixture(id = "hblank.docs-panel", title = "Docs panel", group = "Hblank UI")]
+#[hblank::component(title = "Docs panel", group = "Hblank UI")]
 /// Rustdoc rendered beside the isolated component without duplicate documentation files.
 fn docs_fixture(props: &DocsFixtureProps, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
     docs_panel(DocsPanelProps {
@@ -290,6 +316,11 @@ fn docs_fixture(props: &DocsFixtureProps, _window: &mut Window, _cx: &mut App) -
         docs: props.docs.clone().into(),
         source: "src/fixture_card.hblank.rs:8".into(),
     })
+}
+
+#[hblank::fixture(component = docs_fixture, title = "Default")]
+fn docs_default() -> DocsFixtureProps {
+    DocsFixtureProps::default()
 }
 
 #[derive(Clone, Debug, HblankProps)]
@@ -310,7 +341,7 @@ impl Default for EmptyFixtureProps {
     }
 }
 
-#[hblank::fixture(id = "hblank.empty-state", title = "Empty state", group = "Hblank UI")]
+#[hblank::component(title = "Empty state", group = "Hblank UI")]
 /// Actionable first-run guidance shown when no configured fixtures are linked.
 fn empty_state_fixture(
     props: &EmptyFixtureProps,
@@ -322,3 +353,9 @@ fn empty_state_fixture(
         body: props.body.clone().into(),
     })
 }
+
+#[hblank::fixture(component = empty_state_fixture, title = "Default")]
+fn empty_state_default() -> EmptyFixtureProps {
+    EmptyFixtureProps::default()
+}
+

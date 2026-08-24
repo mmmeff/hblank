@@ -200,9 +200,9 @@ pub fn search(props: SearchProps, on_focus: UiHandler<SearchAction>) -> impl Int
         })
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NavigationItem {
-    pub id: &'static str,
+    pub id: SharedString,
     pub title: &'static str,
     pub group: &'static str,
 }
@@ -210,13 +210,13 @@ pub struct NavigationItem {
 #[derive(Clone, Copy)]
 pub struct NavigationProps<'a> {
     pub items: &'a [NavigationItem],
-    pub selected: Option<&'static str>,
+    pub selected: Option<&'a str>,
     pub query: &'a str,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NavigationAction {
-    pub id: &'static str,
+    pub id: SharedString,
 }
 
 #[must_use]
@@ -249,7 +249,7 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
         children.push(navigation_row(
             index,
             item,
-            props.selected == Some(item.id),
+            props.selected == Some(item.id.as_ref()),
             on_select,
         ));
     }
@@ -304,7 +304,9 @@ fn navigation_row(
     selected: bool,
     on_select: &UiHandler<NavigationAction>,
 ) -> AnyElement {
-    let action = NavigationAction { id: item.id };
+    let action = NavigationAction {
+        id: item.id.clone(),
+    };
     let handler = Rc::clone(on_select);
     div()
         .id(("hblank-nav", index))

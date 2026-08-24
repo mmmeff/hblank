@@ -1,6 +1,7 @@
 use hblank::gpui::{App, IntoElement, ParentElement, Window, div};
 use hblank::{
-    ControlError, ControlKind, ControlValue, HblankEnum, HblankProps, fixture, registered_fixtures,
+    ControlError, ControlKind, ControlValue, HblankEnum, HblankProps, component, fixture,
+    registered_catalog,
 };
 
 #[derive(Clone, Default, HblankEnum)]
@@ -23,10 +24,24 @@ struct DemoProps {
     tone: Tone,
 }
 
-#[fixture(id = "tests.demo", title = "Demo", group = "Tests")]
+#[component(title = "Demo", group = "Tests")]
 /// A presentational component used to verify generated documentation.
 fn demo(props: &DemoProps, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
     div().child(props.label.clone())
+}
+
+#[fixture(component = demo, title = "Default")]
+fn demo_default() -> DemoProps {
+    DemoProps::default()
+}
+
+#[fixture(component = demo, title = "Alternate")]
+fn demo_alternate() -> DemoProps {
+    DemoProps {
+        label: "Alternate".to_owned(),
+        count: 2,
+        ..DemoProps::default()
+    }
 }
 
 #[test]
@@ -55,10 +70,12 @@ fn derives_control_metadata_and_values() {
 
 #[test]
 fn mutates_every_supported_control_type_and_resets() {
-    let mut fixture = registered_fixtures()
+    let mut fixture = registered_catalog()
         .expect("registry should be valid")
+        .into_parts()
+        .1
         .into_iter()
-        .find(|fixture| fixture.metadata().id == "tests.demo")
+        .find(|fixture| fixture.metadata().id.ends_with("contracts.rs#demo_default"))
         .expect("test fixture should be registered");
 
     fixture
@@ -128,18 +145,57 @@ fn rejects_invalid_control_updates() {
 
 #[test]
 fn captures_fixture_rustdoc_and_source_metadata() {
-    let fixtures = registered_fixtures().expect("registry should be valid");
-    let fixture = fixtures
+    let catalog = registered_catalog().expect("registry should be valid");
+    let component = catalog
+        .components()
         .iter()
-        .find(|fixture| fixture.metadata().id == "tests.demo")
+        .find(|component| component.metadata().id.ends_with("contracts.rs#demo"))
+        .expect("test component should be registered");
+    let fixture = catalog
+        .fixtures()
+        .iter()
+        .find(|fixture| fixture.metadata().id.ends_with("contracts.rs#demo_default"))
         .expect("test fixture should be registered");
 
-    assert_eq!(fixture.metadata().title, "Demo");
-    assert_eq!(fixture.metadata().group, "Tests");
+    assert_eq!(component.metadata().title, "Demo");
+    assert_eq!(component.metadata().group, "Tests");
     assert_eq!(
-        fixture.metadata().docs,
+        component.metadata().docs,
         "A presentational component used to verify generated documentation."
     );
+    assert_eq!(fixture.metadata().title, "Default");
+    assert_eq!(fixture.metadata().component_id, component.metadata().id);
     assert!(fixture.metadata().source.ends_with("tests/contracts.rs"));
     assert!(fixture.metadata().line > 0);
+}
+
+#[test]
+fn registers_multiple_variants_under_one_component() {
+    let catalog = registered_catalog().expect("registry should be valid");
+    let component = catalog
+        .components()
+        .iter()
+        .find(|component| component.metadata().id.ends_with("contracts.rs#demo"))
+        .expect("test component should be registered");
+    let fixtures = catalog
+        .fixtures()
+        .iter()
+        .filter(|fixture| fixture.metadata().component_id == component.metadata().id)
+        .collect::<Vec<_>>();
+
+    assert_eq!(fixtures.len(), 2);
+    assert_eq!(fixtures[0].metadata().title, "Alternate");
+    assert!(
+        fixtures[0]
+            .metadata()
+            .id
+            .ends_with("contracts.rs#demo_alternate")
+    );
+    assert_eq!(fixtures[1].metadata().title, "Default");
+    assert!(
+        fixtures[1]
+            .metadata()
+            .id
+            .ends_with("contracts.rs#demo_default")
+    );
 }

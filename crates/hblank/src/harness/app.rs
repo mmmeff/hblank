@@ -15,7 +15,7 @@ use crate::gpui::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{ControlValue, FixtureDefinition, registered_fixtures};
+use crate::{ControlValue, FixtureDefinition, registered_catalog};
 
 use super::components::{
     CanvasProps, ControlAction, ControlsPanelProps, DocsPanelProps, EmptyStateProps, HeaderProps,
@@ -106,15 +106,15 @@ impl HarnessApp {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let state_path = state_path();
         let persisted = load_state(&state_path);
-        let (fixtures, mut status) = match registered_fixtures() {
-            Ok(fixtures) => (fixtures, SharedString::from("Ready")),
+        let (fixtures, mut status) = match registered_catalog() {
+            Ok(catalog) => (catalog.into_parts().1, SharedString::from("Ready")),
             Err(error) => (Vec::new(), SharedString::from(error.to_string())),
         };
         let requested_fixture = env::var("HBLANK_INITIAL_FIXTURE").ok();
         let (selected, matched_fixture) = initial_selection(
             fixtures.iter().map(|fixture| {
                 let metadata = fixture.metadata();
-                (metadata.id, metadata.source)
+                (metadata.id.as_str(), metadata.source)
             }),
             persisted.selected.as_deref(),
             requested_fixture.as_deref(),
@@ -127,7 +127,7 @@ impl HarnessApp {
             .map(|fixture| {
                 let metadata = fixture.metadata();
                 NavigationItem {
-                    id: metadata.id,
+                    id: metadata.id.clone().into(),
                     title: metadata.title,
                     group: metadata.group,
                 }
@@ -170,11 +170,12 @@ impl HarnessApp {
         self.selected.and_then(|index| self.fixtures.get_mut(index))
     }
 
-    fn selected_id(&self) -> Option<&'static str> {
-        self.selected_fixture().map(|fixture| fixture.metadata().id)
+    fn selected_id(&self) -> Option<&str> {
+        self.selected_fixture()
+            .map(|fixture| fixture.metadata().id.as_str())
     }
 
-    fn select(&mut self, id: &'static str, cx: &mut Context<Self>) {
+    fn select(&mut self, id: &str, cx: &mut Context<Self>) {
         if let Some(index) = self
             .fixtures
             .iter()
@@ -226,9 +227,8 @@ impl HarnessApp {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.select(action.id, cx);
+        self.select(action.id.as_ref(), cx);
     }
-
     #[allow(clippy::trivially_copy_pass_by_ref)]
     fn on_search_focus(&mut self, _: &SearchAction, window: &mut Window, cx: &mut Context<Self>) {
         self.editing = EditingTarget::Search;
@@ -379,12 +379,12 @@ impl HarnessApp {
         let Some(index) = self.selected else {
             return empty_state(EmptyStateProps {
                 title: "No fixtures discovered".into(),
-                body: "Add a file matching .hblank/config.toml, annotate a render function with #[hblank::fixture], and save. It will appear here automatically."
+                body: "Add a discovered file, define a #[hblank::component] renderer and a #[hblank::fixture] variant, then save. They will appear here automatically."
                     .into(),
             })
             .into_any_element();
         };
-        let metadata = *self.fixtures[index].metadata();
+        let metadata = self.fixtures[index].metadata();
         let preview = self.fixtures[index].render(window, cx);
         let toolbar_surface = toolbar(
             ToolbarProps {

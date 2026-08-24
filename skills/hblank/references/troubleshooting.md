@@ -35,9 +35,9 @@ Fixture files compile as modules of the private preview crate, not as modules of
 |---|---|---|
 | `HblankProps requires named fields` | tuple/unit struct | use named fixture props |
 | missing `ControlField` | unsupported field type | add a fixture adapter with supported fields |
-| clone/default bound failure | fixture builder cannot create/reset props | implement `Clone` and `Default` |
+| clone bound failure | fixture state cannot be copied for controls/reset | implement `Clone` |
 | enum variant contains data | `HblankEnum` only supports unit variants | map to a fixture-only unit enum |
-| duplicate fixture id | inventory registry collision | assign a stable unique id |
+| duplicate component or fixture id | two registrations use the same source path and function symbol | rename or remove the duplicate registration |
 
 Do not suppress derives or silently omit fields.
 

@@ -65,10 +65,9 @@ A component accepts presentation data and returns GPUI elements. It must not own
 
 Use application/container modules for state and side effects. Pass values and callbacks into presentational functions.
 
-Props used directly by a fixture must implement:
+Props owned by a component must implement:
 
 - `Clone`;
-- `Default`;
 - `HblankProps`;
 - `Send + 'static` through their field types.
 
@@ -87,18 +86,12 @@ Read [references/component-fixtures.md](references/component-fixtures.md) before
 
 **Complete when:** changing each derived value produces a valid production component render without hidden state.
 
-### 4. Register a fixture
+### 4. Register a component and fixture variants
 
-Create a source file matched by `.hblank/config.toml`; the default is `src/**/*.hblank.rs`.
-
-A registered function has exactly this shape:
+Create a source file matched by `.hblank/config.toml`; the default is `src/**/*.hblank.rs`. A component owns the typed renderer and metadata. Each fixture variant takes no arguments and returns that component's props.
 
 ```rust
-#[hblank::fixture(
-    id = "components.badge",
-    title = "Badge",
-    group = "Components"
-)]
+#[hblank::component(title = "Badge", group = "Components")]
 /// Documentation shown automatically in the Hblank Docs panel.
 fn badge_fixture(
     props: &BadgeProps,
@@ -107,18 +100,23 @@ fn badge_fixture(
 ) -> impl IntoElement {
     badge(props, window, cx)
 }
+
+#[hblank::fixture(component = badge_fixture, title = "Default")]
+fn badge_default() -> BadgeProps {
+    BadgeProps::default()
+}
 ```
 
 Rules:
 
 - import host types through `hblank_project` inside fixture files;
-- keep `id` globally unique and stable;
-- use `fixture` or `fixture`, not “story,” in project terminology;
-- use function Rustdoc for the Docs panel and field Rustdoc for control help;
-- multiple registrations per file are supported and sorted by group, title, then id;
+- canonical component and fixture ids derive from project-relative path plus function symbol; never add a second id source;
+- use “component” and “fixture,” not “story,” in project terminology;
+- use component Rustdoc for the Docs panel, fixture Rustdoc for variant notes, and field Rustdoc for control help;
+- multiple components and variants per file are supported and sorted by group, component, variant, then canonical id;
 - never edit `.hblank/generated/fixtures.rs` manually.
 
-**Complete when:** discovery imports the file and the registry contains its expected id, title, group, docs, and controls.
+**Complete when:** discovery imports the file and the registry contains the expected component, variants, canonical ids, docs, and controls.
 
 ### 5. Run the exact fixture
 
@@ -184,3 +182,4 @@ Also run the narrow command that builds the changed preview and exercise the fix
 - Read [references/framework.md](references/framework.md) when changing configuration, discovery, macros, registration, preview startup, or hot reload.
 - Read [references/component-fixtures.md](references/component-fixtures.md) when creating props, enums, components, fixture adapters, or fixture functions.
 - Read [references/troubleshooting.md](references/troubleshooting.md) when discovery, compilation, controls, docs, direct fixture launch, or reload fails.
+

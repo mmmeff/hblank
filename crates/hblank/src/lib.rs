@@ -13,15 +13,16 @@ pub use control::{
     ControlDefinition, ControlError, ControlKind, ControlValue, HblankEnum, HblankProps,
 };
 pub use fixture::{
-    FixtureDefinition, FixtureMetadata, FixtureRegistration, RegistryError, RenderFixture,
-    registered_fixtures,
+    ComponentDefinition, ComponentMetadata, ComponentRegistration, FixtureDefinition,
+    FixtureMetadata, FixtureRegistration, FixtureRegistrationData, FixtureRegistrationMetadata,
+    RegisteredCatalog, RegistryError, RenderComponent, canonical_source_id, registered_catalog,
 };
 #[cfg(feature = "crates-io-gpui")]
 pub use gpui_crates_io as gpui;
 #[cfg(feature = "zed-gpui")]
 pub use gpui_zed as gpui;
 pub use harness::run_harness;
-pub use hblank_macros::{HblankEnum, HblankProps, fixture};
+pub use hblank_macros::{HblankEnum, HblankProps, component, fixture};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 

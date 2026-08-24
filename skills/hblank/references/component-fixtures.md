@@ -73,11 +73,7 @@ The matched fixture file:
 use hblank::gpui::{App, IntoElement, Window};
 use hblank_project::{BadgeProps, badge};
 
-#[hblank::fixture(
-    id = "components.badge",
-    title = "Badge",
-    group = "Components"
-)]
+#[hblank::component(title = "Badge", group = "Components")]
 /// A compact semantic status badge shown in isolation.
 fn badge_fixture(
     props: &BadgeProps,
@@ -85,6 +81,11 @@ fn badge_fixture(
     cx: &mut App,
 ) -> impl IntoElement {
     badge(props, window, cx)
+}
+
+#[hblank::fixture(component = badge_fixture, title = "Default")]
+fn badge_default() -> BadgeProps {
+    BadgeProps::default()
 }
 ```
 
@@ -114,11 +115,7 @@ impl Default for AccountCardFixtureProps {
     }
 }
 
-#[hblank::fixture(
-    id = "components.account-card",
-    title = "Account card",
-    group = "Components"
-)]
+#[hblank::component(title = "Account card", group = "Components")]
 /// Account identity presentation without application state or network data.
 fn account_card_fixture(
     props: &AccountCardFixtureProps,
@@ -135,6 +132,11 @@ fn account_card_fixture(
         cx,
     )
 }
+
+#[hblank::fixture(component = account_card_fixture, title = "Default")]
+fn account_card_default() -> AccountCardFixtureProps {
+    AccountCardFixtureProps::default()
+}
 ```
 
 The adapter is not a second production model. It is a small fixture interface that selects presentation-relevant values and supplies inert callback/resource values explicitly.
@@ -149,3 +151,4 @@ Multiple functions may register from one fixture file. Give every registration a
 - Props field doc comments explain controls.
 - Production component docs remain on the production function/type.
 - Do not duplicate long prose in Hblank-specific files when the production docs already answer the user’s question; fixture docs should explain the showcased state.
+

@@ -160,11 +160,7 @@ The default pattern is `src/**/*.hblank.rs`. Create `src/badge.hblank.rs`:
 use hblank::gpui::{App, IntoElement, Window};
 use hblank_project::{BadgeProps, badge};
 
-#[hblank::fixture(
-    id = "components.badge",
-    title = "Badge",
-    group = "Components"
-)]
+#[hblank::component(title = "Badge", group = "Components")]
 /// A compact status badge. This Rustdoc appears automatically in the Docs panel.
 fn badge_fixture(
     props: &BadgeProps,
@@ -172,6 +168,11 @@ fn badge_fixture(
     cx: &mut App,
 ) -> impl IntoElement {
     badge(props, window, cx)
+}
+
+#[hblank::fixture(component = badge_fixture, title = "Default")]
+fn badge_default() -> BadgeProps {
+    BadgeProps::default()
 }
 ```
 
@@ -275,3 +276,4 @@ After setup, releases require no crates.io secret in GitHub.
 ## Project status
 
 Hblank is pre-1.0 and currently targets GPUI `0.2.2`. The core workflow is implemented and dogfooded: initialization, glob discovery, typed controls, Rustdoc extraction, GPUI navigation, and supervised hot reload.
+

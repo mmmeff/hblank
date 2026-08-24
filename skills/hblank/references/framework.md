@@ -50,14 +50,11 @@ The CLI walks files without following symlinks, normalizes paths, applies includ
 
 ## Registration
 
-`#[hblank::fixture]` keeps the render function and emits an inventory registration. The generated builder:
+`#[hblank::component]` registers one typed renderer and its title, group, Rustdoc, source, and canonical `path#function` id. `#[hblank::fixture]` registers a named default-props variant against that component.
 
-1. creates `Props::default()`;
-2. captures id, title, group, function Rustdoc, source, and line;
-3. downcasts dynamic props to the declared type;
-4. converts the function result to `gpui::AnyElement`.
+The generated component adapter downcasts dynamic props to the component's declared type and converts its output to `gpui::AnyElement`. The fixture factory takes no arguments and returns the same props type; the macro enforces that relationship at compile time.
 
-The runtime collects registrations, sorts by group/title/id, and rejects duplicate ids.
+The runtime joins components and variants, rejects duplicate canonical ids, unknown components, and mismatched props types, then sorts by group/component/variant/id.
 
 ## Controls
 

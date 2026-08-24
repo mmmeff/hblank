@@ -15,11 +15,7 @@ impl Default for LiveDiscoveryProps {
     }
 }
 
-#[hblank::fixture(
-    id = "dogfood.live-discovery",
-    title = "Live discovery",
-    group = "Dogfood"
-)]
+#[hblank::component(title = "Live discovery", group = "Dogfood")]
 /// A fixture added while the development harness is running to verify glob discovery and automatic preview replacement.
 fn live_discovery_fixture(
     props: &LiveDiscoveryProps,
@@ -36,3 +32,9 @@ fn live_discovery_fixture(
         .text_color(rgb(0x303034))
         .child(props.message.clone())
 }
+
+#[hblank::fixture(component = live_discovery_fixture, title = "Default")]
+fn live_discovery_default() -> LiveDiscoveryProps {
+    LiveDiscoveryProps::default()
+}
+
