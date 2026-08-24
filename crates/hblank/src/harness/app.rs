@@ -18,15 +18,15 @@ use crate::gpui::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ControlKind, ControlValue, FixtureDefinition, ResolvedTheme, TextMode, ThemeHook, ThemeMode,
-    registered_catalog, registered_theme_hook, render_fixture,
+    ComponentDefinition, ControlKind, ControlValue, FixtureDefinition, ResolvedTheme, TextMode,
+    ThemeHook, ThemeMode, registered_catalog, registered_theme_hook, render_fixture,
 };
 
 use super::components::{
     CanvasProps, ControlAction, ControlsPanelProps, DocsPanelProps, EmptyStateProps, HeaderProps,
-    InspectorTab, NavigationAction, NavigationItem, NavigationProps, SearchAction, SearchProps,
-    ToolbarAction, ToolbarProps, UiHandler, canvas, controls_panel, docs_panel, empty_state,
-    header, navigation, search, theme, toolbar,
+    InspectorTab, NavigationAction, NavigationComponent, NavigationProps, NavigationVariant,
+    SearchAction, SearchProps, ToolbarAction, ToolbarProps, UiHandler, canvas, controls_panel,
+    docs_panel, empty_state, header, navigation, search, theme, toolbar,
 };
 
 const DEFAULT_WIDTH: f32 = 1440.0;
@@ -64,8 +64,9 @@ enum EditingTarget {
 }
 
 struct HarnessApp {
+    components: Vec<ComponentDefinition>,
     fixtures: Vec<FixtureDefinition>,
-    navigation: Vec<NavigationItem>,
+    navigation: Vec<NavigationComponent>,
     selected: Option<usize>,
     filter: String,
     inspector: InspectorTab,
@@ -124,6 +125,17 @@ fn restore_control_overrides(
     }
 }
 
+fn fixture_matches_query(fixture: &FixtureDefinition, query: &str) -> bool {
+    let metadata = fixture.metadata();
+    query.is_empty()
+        || metadata
+            .component_title
+            .to_ascii_lowercase()
+            .contains(query)
+        || metadata.title.to_ascii_lowercase().contains(query)
+        || metadata.group.to_ascii_lowercase().contains(query)
+}
+
 fn ui_scale_delta(key: &str, modifiers: Modifiers) -> Option<f32> {
     if !modifiers.platform || modifiers.control || modifiers.alt || modifiers.function {
         return None;
@@ -145,9 +157,16 @@ impl HarnessApp {
         let mut persisted = load_state(&state_path);
         let session = env::var("HBLANK_SESSION_ID")
             .unwrap_or_else(|_| format!("process-{}", std::process::id()));
-        let (mut fixtures, mut status) = match registered_catalog() {
-            Ok(catalog) => (catalog.into_parts().1, SharedString::from("Ready")),
-            Err(error) => (Vec::new(), SharedString::from(error.to_string())),
+        let (components, mut fixtures, mut status) = match registered_catalog() {
+            Ok(catalog) => {
+                let (components, fixtures) = catalog.into_parts();
+                (components, fixtures, SharedString::from("Ready"))
+            }
+            Err(error) => (
+                Vec::new(),
+                Vec::new(),
+                SharedString::from(error.to_string()),
+            ),
         };
         let theme_mode = if persisted.session == session {
             restore_control_overrides(&mut fixtures, &persisted.controls);
@@ -175,15 +194,24 @@ impl HarnessApp {
         if requested_fixture.is_some() && !matched_fixture {
             status = "Requested fixture contains no registered fixtures".into();
         }
-        let navigation = fixtures
+        let navigation = components
             .iter()
-            .map(|fixture| {
-                let metadata = fixture.metadata();
-                NavigationItem {
+            .filter_map(|component| {
+                let metadata = component.metadata();
+                let variants = fixtures
+                    .iter()
+                    .filter(|fixture| fixture.metadata().component_id == metadata.id)
+                    .map(|fixture| NavigationVariant {
+                        id: fixture.metadata().id.clone().into(),
+                        title: fixture.metadata().title,
+                    })
+                    .collect::<Vec<_>>();
+                (!variants.is_empty()).then(|| NavigationComponent {
                     id: metadata.id.clone().into(),
                     title: metadata.title,
                     group: metadata.group,
-                }
+                    variants,
+                })
             })
             .collect::<Vec<_>>();
         let focus_handle = cx.focus_handle();
@@ -191,6 +219,7 @@ impl HarnessApp {
         println!("Hblank harness ready: {} fixtures", fixtures.len());
 
         let mut app = Self {
+            components,
             fixtures,
             navigation,
             selected,
@@ -254,14 +283,10 @@ impl HarnessApp {
     fn navigate_filtered(&mut self, delta: isize, cx: &mut Context<Self>) {
         let query = self.filter.to_ascii_lowercase();
         let visible = self
-            .navigation
+            .fixtures
             .iter()
             .enumerate()
-            .filter(|(_, item)| {
-                query.is_empty()
-                    || item.title.to_ascii_lowercase().contains(&query)
-                    || item.group.to_ascii_lowercase().contains(&query)
-            })
+            .filter(|(_, fixture)| fixture_matches_query(fixture, &query))
             .map(|(index, _)| index)
             .collect::<Vec<_>>();
         if visible.is_empty() {
@@ -551,11 +576,34 @@ impl HarnessApp {
             .into_any_element();
         };
         let metadata = self.fixtures[index].metadata();
+        let component = self
+            .components
+            .iter()
+            .find(|component| component.metadata().id == metadata.component_id)
+            .expect("registered fixture must retain its component");
+        let component_metadata = component.metadata();
         let preview = render_fixture(&self.fixtures[index], window, cx);
+        let title = if metadata.title == "Default" {
+            component_metadata.title.to_owned()
+        } else {
+            format!("{} · {}", component_metadata.title, metadata.title)
+        };
+        let docs = if metadata.docs.is_empty() {
+            component_metadata.docs.to_owned()
+        } else if component_metadata.docs.is_empty() {
+            metadata.docs.to_owned()
+        } else {
+            format!(
+                "{}
+
+{}",
+                component_metadata.docs, metadata.docs
+            )
+        };
         let toolbar_surface = toolbar(
             ToolbarProps {
-                title: metadata.title.into(),
-                source: source_label(metadata.source, metadata.line),
+                title: title.into(),
+                source: source_label(component_metadata.source, component_metadata.line),
                 active_tab: self.inspector,
                 theme_mode: self.theme_mode,
             },
@@ -579,9 +627,9 @@ impl HarnessApp {
             )
             .into_any_element(),
             InspectorTab::Docs => docs_panel(DocsPanelProps {
-                title: metadata.title.into(),
-                docs: metadata.docs.into(),
-                source: source_label(metadata.source, metadata.line),
+                title: component_metadata.title.into(),
+                docs: docs.into(),
+                source: source_label(component_metadata.source, component_metadata.line),
             })
             .into_any_element(),
         };
@@ -627,7 +675,7 @@ impl Render for HarnessApp {
         );
         let navigation_surface = navigation(
             NavigationProps {
-                items: &self.navigation,
+                components: &self.navigation,
                 selected: selected_id,
                 query: &self.filter,
             },
@@ -647,6 +695,7 @@ impl Render for HarnessApp {
             .text_color(rgb(theme::text()))
             .child(header(HeaderProps {
                 project: self.project.clone(),
+                component_count: self.components.len(),
                 fixture_count: self.fixtures.len(),
                 status: self.status.clone(),
             }))
@@ -657,7 +706,7 @@ impl Render for HarnessApp {
                     .flex()
                     .child(
                         div()
-                            .w(rems(17.0))
+                            .w(rems(18.0))
                             .h_full()
                             .flex_none()
                             .flex()

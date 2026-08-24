@@ -54,7 +54,7 @@ The CLI walks files without following symlinks, normalizes paths, applies includ
 
 The generated component adapter downcasts dynamic props to the component's declared type and converts its output to `gpui::AnyElement`. The fixture factory takes no arguments and returns the same props type; the macro enforces that relationship at compile time.
 
-The runtime joins components and variants, rejects duplicate canonical ids, unknown components, and mismatched props types, then sorts by group/component/variant/id.
+The runtime joins components and variants, rejects duplicate canonical ids, unknown components, and mismatched props types, then sorts by group/component/variant/id. The native catalog sidebar renders that hierarchy directly; keyboard and text filtering still operate on the flattened selectable variant order. Docs combine component Rustdoc with optional variant notes and point source context at the component renderer.
 
 ## Controls
 
@@ -92,4 +92,5 @@ On relevant content change:
 6. stop the old preview after replacement is ready.
 
 A failed build leaves the old preview alive. Hblank deliberately avoids unstable Rust dynamic-library ABIs.
+
 

@@ -176,14 +176,16 @@ struct ProgressProps {
 
 Adapters convert values only. They do not render custom GPUI editors or bypass the built-in control validation contract.
 
-## Multiple states in one file
+## Multiple variants in one file
 
-Multiple functions may register from one fixture file. Give every registration a unique id. Direct path launch selects the first after global group/title/id sorting, so use separate files when a particular state must have an unambiguous path target.
+Register one `#[hblank::component]` renderer, then add any number of zero-argument `#[hblank::fixture(component = renderer, title = "…")]` factories returning the same props type. Canonical component and fixture ids derive from source path plus function symbol. The harness groups by component and nests variants in title/id order; source-path launch selects the first variant in that hierarchy.
 
 ## Rustdoc placement
 
-- Function doc comments describe the rendered fixture and appear in Docs.
+- Component function doc comments become the generated component catalog description.
+- Fixture factory doc comments add state-specific notes for that variant.
 - Props field doc comments explain controls.
 - Production component docs remain on the production function/type.
 - Do not duplicate long prose in Hblank-specific files when the production docs already answer the user’s question; fixture docs should explain the showcased state.
+
 

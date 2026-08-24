@@ -5,7 +5,7 @@ use std::rc::Rc;
 use hblank::gpui::{App, IntoElement, Window, div, prelude::*, px, rgb};
 use hblank::harness::{
     CanvasProps, ControlsPanelProps, DocsPanelProps, EmptyStateProps, HeaderProps, InspectorTab,
-    NavigationItem, NavigationProps, SearchProps, ToolbarProps, UiHandler, canvas, controls_panel,
+    NavigationComponent, NavigationProps, NavigationVariant, SearchProps, ToolbarProps, UiHandler, canvas, controls_panel,
     docs_panel, empty_state, header, navigation, search, toolbar,
 };
 use hblank::{HblankEnum, HblankProps, ThemeMode};
@@ -18,6 +18,8 @@ fn noop<T: 'static>() -> UiHandler<T> {
 struct HeaderFixtureProps {
     /// Project label shown next to the Hblank mark.
     project: String,
+    /// Number of discovered components.
+    component_count: u32,
     /// Number of discovered fixtures.
     fixture_count: u32,
     /// Build and reload status.
@@ -28,7 +30,8 @@ impl Default for HeaderFixtureProps {
     fn default() -> Self {
         Self {
             project: "hblank-dogfood · Hblank".to_owned(),
-            fixture_count: 9,
+            component_count: 8,
+            fixture_count: 10,
             status: "Ready".to_owned(),
         }
     }
@@ -43,6 +46,7 @@ fn header_fixture(
 ) -> impl IntoElement {
     header(HeaderProps {
         project: props.project.clone().into(),
+        component_count: props.component_count as usize,
         fixture_count: props.fixture_count as usize,
         status: props.status.clone().into(),
     })
@@ -112,28 +116,37 @@ fn navigation_fixture(
     _window: &mut Window,
     _cx: &mut App,
 ) -> impl IntoElement {
-    let items = [
-        NavigationItem {
+    let components = [
+        NavigationComponent {
             id: "components.button".into(),
             title: "Button",
             group: "Components",
+            variants: vec![
+                NavigationVariant {
+                    id: "components.button#default".into(),
+                    title: "Default",
+                },
+                NavigationVariant {
+                    id: "components.button#loading".into(),
+                    title: "Loading",
+                },
+            ],
         },
-        NavigationItem {
+        NavigationComponent {
             id: "components.card".into(),
             title: "Card",
             group: "Components",
-        },
-        NavigationItem {
-            id: "patterns.empty-state".into(),
-            title: "Empty state",
-            group: "Patterns",
+            variants: vec![NavigationVariant {
+                id: "components.card#default".into(),
+                title: "Default",
+            }],
         },
     ];
     let handler = noop();
     navigation(
         NavigationProps {
-            items: &items,
-            selected: Some("components.button"),
+            components: &components,
+            selected: Some("components.button#default"),
             query: &props.query,
         },
         &handler,
@@ -360,4 +373,5 @@ fn empty_state_fixture(
 fn empty_state_default() -> EmptyFixtureProps {
     EmptyFixtureProps::default()
 }
+
 

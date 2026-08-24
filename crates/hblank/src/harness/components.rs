@@ -172,6 +172,7 @@ pub enum InspectorTab {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HeaderProps {
     pub project: SharedString,
+    pub component_count: usize,
     pub fixture_count: usize,
     pub status: SharedString,
 }
@@ -242,9 +243,11 @@ pub fn header(props: HeaderProps) -> Div {
                         .py_1()
                         .text_color(rgb(theme::sidebar_text()))
                         .child(format!(
-                            "{} fixture{}",
+                            "{} component{} · {} fixture{}",
+                            props.component_count,
+                            if props.component_count == 1 { "" } else { "s" },
                             props.fixture_count,
-                            if props.fixture_count == 1 { "" } else { "s" }
+                            if props.fixture_count == 1 { "" } else { "s" },
                         )),
                 )
                 .child(
@@ -322,15 +325,22 @@ pub fn search(props: SearchProps, on_focus: UiHandler<SearchAction>) -> impl Int
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct NavigationItem {
+pub struct NavigationVariant {
+    pub id: SharedString,
+    pub title: &'static str,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NavigationComponent {
     pub id: SharedString,
     pub title: &'static str,
     pub group: &'static str,
+    pub variants: Vec<NavigationVariant>,
 }
 
 #[derive(Clone, Copy)]
 pub struct NavigationProps<'a> {
-    pub items: &'a [NavigationItem],
+    pub components: &'a [NavigationComponent],
     pub selected: Option<&'a str>,
     pub query: &'a str,
 }
@@ -340,39 +350,59 @@ pub struct NavigationAction {
     pub id: SharedString,
 }
 
+fn navigation_matches(
+    component: &NavigationComponent,
+    variant: &NavigationVariant,
+    query: &str,
+) -> bool {
+    query.is_empty()
+        || component.title.to_ascii_lowercase().contains(query)
+        || component.group.to_ascii_lowercase().contains(query)
+        || variant.title.to_ascii_lowercase().contains(query)
+}
+
 #[must_use]
 pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAction>) -> Div {
     let query = props.query.to_ascii_lowercase();
-    let visible = props.items.iter().filter(|item| {
-        query.is_empty()
-            || item.title.to_ascii_lowercase().contains(&query)
-            || item.group.to_ascii_lowercase().contains(&query)
-    });
     let mut previous_group = None;
     let mut visible_count = 0;
+    let mut row_index = 0;
     let mut children = Vec::new();
-    for (index, item) in visible.enumerate() {
-        visible_count += 1;
-        if previous_group != Some(item.group) {
-            previous_group = Some(item.group);
-            children.push(
-                div()
-                    .mt_3()
-                    .mb_1()
-                    .px_4()
-                    .text_xs()
-                    .font_weight(FontWeight::SEMIBOLD)
-                    .text_color(rgb(theme::sidebar_text_muted()))
-                    .child(item.group)
-                    .into_any_element(),
-            );
+    for component in props.components {
+        let visible = component
+            .variants
+            .iter()
+            .filter(|variant| navigation_matches(component, variant, &query))
+            .collect::<Vec<_>>();
+        if visible.is_empty() {
+            continue;
         }
-        children.push(navigation_row(
-            index,
-            item,
-            props.selected == Some(item.id.as_ref()),
+        visible_count += visible.len();
+        if previous_group != Some(component.group) {
+            previous_group = Some(component.group);
+            children.push(group_heading(component.group));
+        }
+        let selected_component = component
+            .variants
+            .iter()
+            .any(|variant| props.selected == Some(variant.id.as_ref()));
+        children.push(component_row(
+            row_index,
+            component,
+            visible[0],
+            selected_component,
             on_select,
         ));
+        row_index += 1;
+        for variant in visible {
+            children.push(variant_row(
+                row_index,
+                variant,
+                props.selected == Some(variant.id.as_ref()),
+                on_select,
+            ));
+            row_index += 1;
+        }
     }
     if visible_count == 0 {
         children.push(
@@ -384,13 +414,13 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
                 .bg(rgb(theme::chrome_raised()))
                 .text_sm()
                 .text_color(rgb(theme::sidebar_text_muted()))
-                .child("No matching fixtures")
+                .child("No matching components")
                 .into_any_element(),
         );
     }
 
     div()
-        .w(rems(17.0))
+        .w(rems(18.0))
         .flex_1()
         .min_h_0()
         .flex()
@@ -415,24 +445,78 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
                 .border_color(rgb(theme::chrome_border()))
                 .text_xs()
                 .text_color(rgb(theme::sidebar_text_muted()))
-                .child("Type to filter · Arrow keys to navigate"),
+                .child("Filter components and variants · Arrow keys navigate"),
         )
 }
 
-fn navigation_row(
+fn group_heading(group: &'static str) -> AnyElement {
+    div()
+        .mt_3()
+        .mb_1()
+        .px_4()
+        .text_xs()
+        .font_weight(FontWeight::SEMIBOLD)
+        .text_color(rgb(theme::sidebar_text_muted()))
+        .child(group)
+        .into_any_element()
+}
+
+fn component_row(
     index: usize,
-    item: &NavigationItem,
+    component: &NavigationComponent,
+    first_variant: &NavigationVariant,
     selected: bool,
     on_select: &UiHandler<NavigationAction>,
 ) -> AnyElement {
     let action = NavigationAction {
-        id: item.id.clone(),
+        id: first_variant.id.clone(),
     };
     let handler = Rc::clone(on_select);
     div()
-        .id(("hblank-nav", index))
+        .id(("hblank-component", index))
         .mx_2()
-        .h(rems(2.0))
+        .h(rems(2.25))
+        .flex()
+        .items_center()
+        .justify_between()
+        .px_3()
+        .rounded_md()
+        .text_sm()
+        .font_weight(FontWeight::SEMIBOLD)
+        .cursor_pointer()
+        .bg(rgb(if selected {
+            theme::sidebar_hover()
+        } else {
+            theme::sidebar()
+        }))
+        .text_color(rgb(theme::chrome_text()))
+        .hover(|this| this.bg(rgb(theme::sidebar_hover())))
+        .on_click(move |_, window, cx| handler(&action, window, cx))
+        .child(component.title)
+        .child(
+            div()
+                .text_xs()
+                .text_color(rgb(theme::sidebar_text_muted()))
+                .child(component.variants.len().to_string()),
+        )
+        .into_any_element()
+}
+
+fn variant_row(
+    index: usize,
+    variant: &NavigationVariant,
+    selected: bool,
+    on_select: &UiHandler<NavigationAction>,
+) -> AnyElement {
+    let action = NavigationAction {
+        id: variant.id.clone(),
+    };
+    let handler = Rc::clone(on_select);
+    div()
+        .id(("hblank-variant", index))
+        .ml_5()
+        .mr_2()
+        .h(rems(1.875))
         .flex()
         .items_center()
         .px_3()
@@ -443,37 +527,27 @@ fn navigation_row(
         } else {
             theme::sidebar()
         }))
-        .text_sm()
+        .text_xs()
         .cursor_pointer()
-        .bg(if selected {
-            rgb(theme::sidebar_selected())
+        .bg(rgb(if selected {
+            theme::sidebar_selected()
         } else {
-            rgb(theme::sidebar())
-        })
-        .text_color(if selected {
-            rgb(theme::chrome_text())
+            theme::sidebar()
+        }))
+        .text_color(rgb(if selected {
+            theme::chrome_text()
         } else {
-            rgb(theme::sidebar_text())
-        })
+            theme::sidebar_text()
+        }))
         .hover(move |this| {
-            if selected {
-                this.bg(rgb(theme::sidebar_selected_hover()))
-                    .border_color(rgb(theme::accent()))
-            } else {
-                this.bg(rgb(theme::sidebar_hover()))
-                    .border_color(rgb(theme::chrome_border()))
-            }
-            .text_color(rgb(theme::chrome_text()))
-        })
-        .active(move |this| {
             this.bg(rgb(if selected {
                 theme::sidebar_selected_hover()
             } else {
-                theme::chrome_raised()
+                theme::sidebar_hover()
             }))
         })
         .on_click(move |_, window, cx| handler(&action, window, cx))
-        .child(item.title)
+        .child(variant.title)
         .into_any_element()
 }
 
@@ -1325,4 +1399,32 @@ pub fn empty_state(props: EmptyStateProps) -> Div {
                         .child(props.body),
                 ),
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{NavigationComponent, NavigationVariant, navigation_matches};
+
+    fn component() -> NavigationComponent {
+        NavigationComponent {
+            id: "src/button.rs#button".into(),
+            title: "Button",
+            group: "Inputs",
+            variants: vec![NavigationVariant {
+                id: "src/button.rs#loading".into(),
+                title: "Loading",
+            }],
+        }
+    }
+
+    #[test]
+    fn nested_navigation_filters_group_component_and_variant() {
+        let component = component();
+        let variant = &component.variants[0];
+
+        assert!(navigation_matches(&component, variant, "inputs"));
+        assert!(navigation_matches(&component, variant, "button"));
+        assert!(navigation_matches(&component, variant, "loading"));
+        assert!(!navigation_matches(&component, variant, "card"));
+    }
 }
