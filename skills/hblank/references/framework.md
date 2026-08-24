@@ -6,7 +6,8 @@ The installable skill, framework packages, and command are all named `hblank`:
 
 | Role | Name |
 |---|---|
-| runtime crate | `hblank` |
+| framework-neutral core crate | `hblank-core` |
+| GPUI adapter/runtime crate | `hblank` |
 | procedural macro crate | `hblank-macros` |
 | CLI package | `hblank-cli` |
 | executable | `hblank` |
@@ -106,6 +107,7 @@ On relevant content change:
 6. stop the old preview after replacement is ready.
 
 A failed build leaves the old preview alive. Hblank deliberately avoids unstable Rust dynamic-library ABIs.
+
 
 
 

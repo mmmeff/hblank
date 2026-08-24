@@ -330,6 +330,12 @@ cargo run -p hblank-cli -- dev --project fixtures/dogfood
 
 That fixture is the contract: Hblank must remain capable of building and inspecting Hblank.
 
+## Migrating pre-component fixtures
+
+The pre-0.3 `#[hblank::fixture(id, title, group)] fn(&Props, Window, App)` interface was removed. Move the renderer to `#[hblank::component(title, group)]`, then create one zero-argument `#[hblank::fixture(component = renderer, title)] -> Props` factory per state. Delete explicit ids and obtain canonical `path#function` values from `hblank list`.
+
+Existing private preview manifests must enable `test-support` on both `gpui` and `hblank`, add direct `gpui = "0.2.2"`, and expose `pub use hblank::gpui;` from preview main for `#[gpui::test]` expansion. Fresh `hblank init` output already contains this setup.
+
 ## Commands
 
 ```text
@@ -348,14 +354,14 @@ hblank test [--project PATH] [--filter FILTER]
 
 ## Releases
 
-Pushes to main run semantic-release. Conventional commits determine the next lockstep version for hblank-macros, hblank, and hblank-cli:
+Pushes to main run semantic-release. Conventional commits determine the next lockstep version for hblank-core, hblank-macros, hblank, and hblank-cli:
 
 - fix commits publish a patch release;
 - feat commits publish a minor release;
 - BREAKING CHANGE footers or commits marked with ! publish a major release;
 - docs, test, and chore commits do not publish.
 
-The workflow updates the workspace and internal dependency versions, updates Cargo.lock and CHANGELOG.md, commits and tags the release, publishes the three crates in dependency order, waits for crates.io indexing between them, and creates the GitHub release. Partial crate publication is retry-safe.
+The workflow updates the workspace and internal dependency versions, updates Cargo.lock and CHANGELOG.md, commits and tags the release, publishes the four crates in dependency order, waits for crates.io indexing between them, and creates the GitHub release. Partial crate publication is retry-safe.
 
 Run the one-time setup wizard to bootstrap the unpublished crate names and replace the temporary crates.io token with GitHub OIDC Trusted Publishing:
 
@@ -365,13 +371,5 @@ After setup, releases require no crates.io secret in GitHub.
 
 ## Project status
 
-Hblank is pre-1.0 and currently targets GPUI `0.2.2`. The core workflow is implemented and dogfooded: initialization, glob discovery, typed controls, Rustdoc extraction, GPUI navigation, and supervised hot reload.
-
-
-
-
-
-
-
-
+Hblank is pre-1.0 and targets GPUI `0.2.2`. The dogfooded local-native workflow now includes framework-neutral catalog/control contracts, first-class components and variants, rich controls, typed/custom documentation, captured source, system themes, rebuild-session continuity, canonical CLI launch/listing, explicit generated-target tests, and typed GPUI test handles.
 
