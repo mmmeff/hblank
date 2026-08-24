@@ -2,17 +2,28 @@
 
 # hblank
 
-**Build GPUI components in isolation. See every state. Change anything live.**
+**The native component workbench for Rust UI.**
 
 [![Rust 1.85+](https://img.shields.io/badge/Rust-1.85%2B-202124?style=flat-square&logo=rust)](https://www.rust-lang.org/)
 [![GPUI 0.2.2](https://img.shields.io/badge/GPUI-0.2.2-7357d8?style=flat-square)](https://gpui.rs/)
 [![Status: pre-1.0](https://img.shields.io/badge/status-pre--1.0-258b63?style=flat-square)](#project-status)
 
-Hblank is the Rust/GPUI analog to Storybook: glob-discovered component fixtures, generated property controls, Rustdoc beside the preview, and automatic rebuilds in a dedicated GPUI desktop harness.
+Build components in isolation, keep named variants beside the source, change typed props live, and document behavior in the same native desktop harness.
 
 </div>
 
-![Hblank running its own component fixtures](assets/hblank-harness.png)
+![Illustration of Hblank's component-first catalog, isolated preview, and generated property controls](assets/hblank-harness.svg)
+
+## What ships today
+
+| Surface | Current behavior |
+|---|---|
+| Component catalog | Glob discovery, component-first navigation, nested named variants, stable `path#function` fixture IDs |
+| Live controls | Generated toggles, text editors, numeric constraints, enum choices, skipped fields, and project-owned type adapters |
+| Documentation | Component and variant Rustdoc, typed `DocPage` blocks, captured source, live fixture embeds, and native custom blocks |
+| Themes | System, Light, and Dark harness modes with live OS updates and an optional project theme hook |
+| Development | Supervised rebuilds, last-good preview retention, exact fixture launch, and session control-state restoration |
+| Testing | Explicit generated-target tests plus deterministic GPUI helpers and typed component handles |
 
 ## Try it now
 
@@ -26,46 +37,40 @@ cargo run -p hblank-cli -- dev --project fixtures/dogfood
 
 A GPUI window opens with Hblank's fixture card and every presentational component used to build the harness itself.
 
+Open one exact variant instead:
+
+```bash
+cargo run -p hblank-cli -- dev \
+  --project fixtures/dogfood \
+  --fixture-id 'src/fixture_card.hblank.rs#fixture_card_default'
+```
+
 ## Give your AI agent Hblank
 
-Install the framework skill into any agent supported by the Skills CLI:
+Install the repository's `hblank` skill into any agent supported by the Skills CLI:
 
 ```bash
 npx skills add mmmeff/hblank
 ```
 
-The command resolves `https://github.com/mmmeff/hblank`; the repository must be public or accessible through the user's GitHub credentials.
-
-The installed skill is named `hblank`. It gives the agent the framework model, exact component and fixture contracts, CLI workflows, generated-control rules, Rustdoc behavior, direct fixture launch, hot-reload lifecycle, debugging decision tree, and verification gates.
-
-Invoke it before component work, for example:
+The skill captures Hblank's component and fixture contracts, CLI workflows, generated-control rules, documentation model, reload lifecycle, debugging paths, and verification gates. For example:
 
 ```text
-Use the hblank skill to add an isolated loading-state fixture for AccountCard, run it directly, and verify every control.
+Use the hblank skill to add an isolated loading-state variant for AccountCard,
+run it by exact fixture ID, and verify every generated control.
 ```
 
-The skill teaches agents to:
-
-- initialize or inspect an existing `.hblank/` project without overwriting configuration;
-- build state-free GPUI components with typed `HblankProps` and `HblankEnum` controls;
-- author discovered `*.hblank.rs` fixtures with automatic Rustdoc;
-- open the exact file under development with `hblank dev --fixture PATH`;
-- iterate against the real GPUI harness and diagnose discovery, compilation, control, docs, and reload failures;
-- finish with direct UI evidence plus repository formatting, lint, and test gates.
-
-To inspect the published skill before installing:
-
-```bash
-npx skills add mmmeff/hblank --list
-```
+Inspect the skill before installing with `npx skills add mmmeff/hblank --list`.
 
 ## Framework adapters
 
-`hblank-core` contains the framework-neutral props, controls, component metadata, fixture variants, canonical identity, and catalog assembly model. It has no GPUI dependency. The `hblank` crate is the GPUI adapter: it supplies GPUI render functions, inventory discovery, the desktop harness, and the authoring macros' runtime target. Additional UI-framework adapters can reuse the same core model without importing GPUI.
+`hblank-core` owns the framework-neutral props, controls, component metadata, fixture variants, canonical identity, and catalog assembly model; it has no GPUI dependency. The `hblank` crate is the GPUI adapter: it adds GPUI render functions, inventory discovery, the desktop harness, and the authoring macros' runtime target.
+
+Additional UI-framework adapters can reuse the core model without importing GPUI. GPUI is the only complete adapter currently shipped.
 
 ## Add Hblank to a GPUI project
 
-Until the crates are published, install from a local checkout:
+Current `main` contains the component-first API planned for the next release. Until the complete four-crate release is available on crates.io, install from a local checkout:
 
 ```bash
 # From the hblank checkout
@@ -81,11 +86,13 @@ hblank dev
 
 ```text
 .hblank/
-├── config.toml          # Discovery patterns and window settings
+├── config.toml          # Discovery patterns, theme hook, and window settings
 ├── Cargo.toml           # Private preview crate
 ├── src/main.rs          # Harness entry point
 └── generated/           # Regenerated by hblank dev
 ```
+
+The default `crates-io-gpui` feature targets GPUI 0.2.2. Projects on Zed's GPUI fork can disable default features and enable `zed-gpui`.
 
 ## Build a component fixture
 
@@ -163,7 +170,7 @@ The default pattern is `src/**/*.hblank.rs`. Create `src/badge.hblank.rs`:
 ```rust
 use hblank::{CalloutTone, DocBlock, DocPage};
 use hblank::gpui::{App, IntoElement, Window};
-use hblank_project::{BadgeProps, badge};
+use hblank_project::{BadgeProps, Tone, badge};
 
 #[hblank::component(
     title = "Badge",
@@ -209,7 +216,11 @@ fn badge_docs() -> DocPage {
 }
 ```
 
-One component owns one props schema, renderer, and optional typed `DocPage`. `DocBlock` values compose headings, prose, live fixture canvases, generated props, interactive controls, callouts, and source context without a second markup language. Projects can add a stable native extension with `#[hblank::doc_block]`; `hblank::custom_doc!(renderer, payload)` embeds it with a read-only `DocContext` containing component, fixture, and resolved theme metadata. Fixture factories provide named default states. The sidebar groups components first and nests their variants; selecting a component opens its first visible variant. Component Rustdoc is the generated catalog description, while optional fixture Rustdoc adds variant-specific notes. Source blocks show project-relative locations plus normalized component and fixture declaration tokens captured at compile time; exact whitespace and ordinary comments are intentionally not preserved.
+One component owns one props schema, renderer, and optional typed `DocPage`. Fixture factories provide its named default states; the sidebar groups components first and nests those variants.
+
+`DocBlock` values compose headings, prose, live fixture canvases, generated props, interactive controls, callouts, and captured source without a second markup language. Projects can register native extensions with `#[hblank::doc_block]` and embed them with `hblank::custom_doc!(renderer, payload)`; the renderer receives a read-only `DocContext` with component, fixture, and resolved-theme metadata.
+
+Component Rustdoc becomes the catalog description, optional fixture Rustdoc adds variant-specific notes, and source blocks show project-relative paths plus compile-time normalized declaration tokens. Exact whitespace and ordinary comments are intentionally not preserved.
 
 Save the file while `hblank dev` is running. The harness discovers it, rebuilds the private preview crate, and adds **Badge** to navigation without restarting the command.
 
@@ -253,7 +264,7 @@ height = 900
 
 Patterns are project-root-relative. Discovery order is deterministic, duplicate file names are safe, and generated module identifiers remain stable.
 
-## Light and dark themes
+## System, light, and dark themes
 
 The harness follows the OS appearance by default. The toolbar can override Light or Dark for the current `hblank dev` session. Without a configured project hook, the override affects Hblank chrome only.
 
@@ -371,5 +382,5 @@ After setup, releases require no crates.io secret in GitHub.
 
 ## Project status
 
-Hblank is pre-1.0 and targets GPUI `0.2.2`. The dogfooded local-native workflow now includes framework-neutral catalog/control contracts, first-class components and variants, rich controls, typed/custom documentation, captured source, system themes, rebuild-session continuity, canonical CLI launch/listing, explicit generated-target tests, and typed GPUI test handles.
+Hblank is pre-1.0, targets GPUI `0.2.2`, and is dogfooded against its own presentational components. The component-first API on `main` is ahead of the current crates.io release; use the local-checkout installation above for the documented behavior.
 

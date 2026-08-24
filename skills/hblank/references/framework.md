@@ -22,14 +22,29 @@ Always confirm these with the checked-out repository; use code truth if a later 
 
 ```text
 .hblank/
+├── .gitignore
 ├── config.toml
 ├── Cargo.toml
 ├── src/main.rs
-├── generated/fixtures.rs
-└── target/
+└── generated/fixtures.rs
 ```
 
-The host package remains the source of production components. The preview crate depends on both `hblank` and the host package under the alias `hblank_project`.
+The host package remains the source of production components. The preview crate depends on both `hblank` and the host package under the alias `hblank_project`. Cargo later creates `.hblank/target/`; runtime state lives at `.hblank/state.toml`. Both are ignored by the generated `.hblank/.gitignore`.
+
+## GPUI backend selection
+
+`hblank-core` has no GPUI dependency. The `hblank` adapter requires exactly one backend feature:
+
+| Feature | Use |
+|---|---|
+| `crates-io-gpui` | Default; GPUI 0.2.2 from crates.io |
+| `zed-gpui` | Zed's Git GPUI plus its platform application bootstrap |
+
+Enabling both or neither fails with `enable exactly one GPUI backend feature`. Fixture files should import GPUI through `hblank::gpui` so their types follow the selected adapter backend.
+
+`hblank init` currently writes a crates.io-GPUI preview manifest with direct `gpui` and `hblank` dependencies using `test-support`. When the host uses Zed GPUI, reconcile `.hblank/Cargo.toml` after initialization: disable Hblank's default features, enable `zed-gpui` and `test-support`, and make the direct `gpui` dependency use the same Git source and revision as the host and Hblank adapter. Different GPUI package identities produce incompatible `App`, `Window`, and element types; never paper over that with conversions.
+
+The generated preview entry point re-exports `hblank::gpui` for macro expansion. Keep the direct `gpui` dependency because `#[gpui::test]` resolves that crate name.
 
 ## Discovery
 
@@ -38,6 +53,8 @@ Configuration is project-root-relative:
 ```toml
 fixtures = ["src/**/*.hblank.rs"]
 ignore = ["target/**", ".hblank/**"]
+
+theme_hook = "my_app::apply_hblank_theme"
 
 [window]
 title = "my-app · Hblank"
@@ -55,7 +72,7 @@ The CLI walks files without following symlinks, normalizes paths, applies includ
 
 The generated component adapter downcasts dynamic props to the component's declared type and converts its output to `gpui::AnyElement`. The fixture factory takes no arguments and returns the same props type; the macro enforces that relationship at compile time.
 
-The runtime joins components and variants, rejects duplicate canonical ids, unknown components, and mismatched props types, then sorts by group/component/variant/id. The native catalog sidebar renders that hierarchy directly; keyboard and text filtering still operate on the flattened selectable variant order. Docs combine component Rustdoc with optional variant notes and point source context at the component renderer.
+The runtime joins components and variants, rejects duplicate canonical ids, unknown components, and mismatched props types, then sorts by group/component/variant/id. The native catalog sidebar renders that hierarchy directly; keyboard and text filtering still operate on the flattened selectable variant order. Component and variant Rustdoc plus captured declarations remain available to generated pages and explicitly authored `DocPage` blocks.
 
 ## Controls
 
@@ -87,7 +104,7 @@ Selection and filter persist in `.hblank/state.toml`. The CLI assigns one `HBLAN
 
 ## Fixture tests
 
-`hblank init` enables the GPUI `test-support` feature in the private preview dependency. `hblank test` refreshes discovered imports and invokes ordinary `cargo test` against that generated manifest/target directory. Inline `#[cfg(test)]` modules in discovered fixture files therefore run in the same crate graph as the harness; `--filter` passes one Cargo test-name filter.
+`hblank init` enables `test-support` on both the direct GPUI dependency and Hblank in the private preview. `hblank test` refreshes discovered imports and invokes ordinary `cargo test` against that generated manifest and target directory. Inline `#[cfg(test)]` modules in discovered fixture files therefore run in the same crate graph as the harness; `--filter` passes one Cargo test-name filter.
 
 `Rendered<Handle, Content>` delegates `IntoElement` in production. A component declaring `handle = Type` receives a generated `render_with_handle` helper; `render_handle!` preserves its concrete handle while erasing only the element. Under `test-support`, `hblank::testing` re-exports GPUI test contexts and provides `draw_fixture`, `draw_with_handle`, and `click_bounds`.
 
@@ -107,12 +124,4 @@ On relevant content change:
 6. stop the old preview after replacement is ready.
 
 A failed build leaves the old preview alive. Hblank deliberately avoids unstable Rust dynamic-library ABIs.
-
-
-
-
-
-
-
-
 

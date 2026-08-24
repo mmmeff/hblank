@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Hblank native component catalog</title>
+  <desc id="desc">A dark Hblank workbench with nested component variants, an isolated GPUI preview, live controls, documentation tabs, and theme selection.</desc>
+  <defs>
+    <linearGradient id="frame" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#15151b"/>
+      <stop offset="1" stop-color="#20202a"/>
+    </linearGradient>
+    <linearGradient id="canvas" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101015"/>
+      <stop offset="1" stop-color="#181822"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2b2839"/>
+      <stop offset="1" stop-color="#24242c"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000" flood-opacity=".42"/>
+    </filter>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity=".3"/>
+    </filter>
+    <clipPath id="windowClip"><rect x="36" y="36" width="1528" height="828" rx="20"/></clipPath>
+    <style>
+      .sans { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .mono { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+      .muted { fill: #9999a5; }
+      .subtle { fill: #b0b0bb; }
+      .text { fill: #f8f8f6; }
+      .label { font-size: 14px; font-weight: 650; letter-spacing: .02em; }
+      .tiny { font-size: 12px; letter-spacing: .035em; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="900" fill="#0b0b10"/>
+  <circle cx="1300" cy="80" r="320" fill="#7559e8" opacity=".07"/>
+  <circle cx="180" cy="850" r="360" fill="#53cf82" opacity=".035"/>
+
+  <g filter="url(#shadow)">
+    <rect x="36" y="36" width="1528" height="828" rx="20" fill="url(#frame)" stroke="#3a3a47" stroke-width="2"/>
+  </g>
+
+  <g clip-path="url(#windowClip)" class="sans">
+    <!-- Header -->
+    <rect x="36" y="36" width="1528" height="66" fill="#17171c"/>
+    <line x1="36" y1="102" x2="1564" y2="102" stroke="#393944"/>
+    <rect x="58" y="52" width="36" height="36" rx="10" fill="#7559e8"/>
+    <text x="76" y="77" class="sans text" font-size="20" font-weight="800" text-anchor="middle">H</text>
+    <text x="108" y="73" class="sans text" font-size="18" font-weight="750">hblank</text>
+    <rect x="176" y="57" width="1" height="26" fill="#393944"/>
+    <text x="194" y="73" class="sans subtle" font-size="13">hblank-dogfood</text>
+
+    <rect x="1242" y="54" width="164" height="32" rx="16" fill="#24242c" stroke="#393944"/>
+    <text x="1324" y="75" class="sans subtle" font-size="12" text-anchor="middle">10 components · 10 fixtures</text>
+    <circle cx="1432" cy="70" r="5" fill="#53cf82"/>
+    <text x="1446" y="75" class="sans" fill="#a2e8bb" font-size="12">Ready</text>
+
+    <!-- Sidebar -->
+    <rect x="36" y="102" width="286" height="762" fill="#1d1d24"/>
+    <line x1="322" y1="102" x2="322" y2="864" stroke="#393944"/>
+    <rect x="56" y="124" width="246" height="40" rx="10" fill="#24242c" stroke="#4a4a57"/>
+    <circle cx="76" cy="144" r="7" fill="none" stroke="#9999a5" stroke-width="2"/>
+    <line x1="81" y1="149" x2="87" y2="155" stroke="#9999a5" stroke-width="2" stroke-linecap="round"/>
+    <text x="98" y="150" class="sans muted" font-size="13">Filter fixtures…</text>
+
+    <text x="58" y="197" class="sans muted tiny" font-weight="700">DOGFOOD</text>
+    <rect x="50" y="211" width="258" height="42" rx="9" fill="#292932"/>
+    <text x="66" y="237" class="sans text label">Fixture card</text>
+    <text x="288" y="237" class="sans muted" font-size="12" text-anchor="end">1</text>
+    <rect x="72" y="260" width="236" height="34" rx="8" fill="#39325a" stroke="#8b75f6"/>
+    <circle cx="88" cy="277" r="4" fill="#8b75f6"/>
+    <text x="101" y="282" class="sans text" font-size="13">Default</text>
+
+    <rect x="50" y="304" width="258" height="42" rx="9" fill="transparent"/>
+    <text x="66" y="330" class="sans text label">Live discovery</text>
+    <text x="288" y="330" class="sans muted" font-size="12" text-anchor="end">1</text>
+
+    <text x="58" y="382" class="sans muted tiny" font-weight="700">HBLANK UI</text>
+    <g class="sans">
+      <text x="66" y="424" class="text label">Canvas</text><text x="288" y="424" class="muted" font-size="12" text-anchor="end">1</text>
+      <text x="66" y="468" class="text label">Controls panel</text><text x="288" y="468" class="muted" font-size="12" text-anchor="end">1</text>
+      <text x="66" y="512" class="text label">Docs panel</text><text x="288" y="512" class="muted" font-size="12" text-anchor="end">1</text>
+      <text x="66" y="556" class="text label">Empty state</text><text x="288" y="556" class="muted" font-size="12" text-anchor="end">1</text>
+      <text x="66" y="600" class="text label">Header</text><text x="288" y="600" class="muted" font-size="12" text-anchor="end">1</text>
+      <text x="66" y="644" class="text label">Navigation</text><text x="288" y="644" class="muted" font-size="12" text-anchor="end">1</text>
+      <text x="66" y="688" class="text label">Search</text><text x="288" y="688" class="muted" font-size="12" text-anchor="end">1</text>
+      <text x="66" y="732" class="text label">Toolbar</text><text x="288" y="732" class="muted" font-size="12" text-anchor="end">1</text>
+    </g>
+    <text x="58" y="830" class="sans muted" font-size="11">Filter components and variants · Arrow keys navigate</text>
+
+    <!-- Main toolbar -->
+    <rect x="322" y="102" width="1242" height="76" fill="#24242c"/>
+    <line x1="322" y1="178" x2="1564" y2="178" stroke="#393944"/>
+    <text x="352" y="132" class="sans text" font-size="17" font-weight="750">Fixture card</text>
+    <text x="352" y="155" class="mono muted" font-size="11">src/fixture_card.hblank.rs:10</text>
+
+    <g transform="translate(1052 119)">
+      <rect width="206" height="40" rx="10" fill="#2c2c35" stroke="#393944"/>
+      <rect x="4" y="4" width="66" height="32" rx="8" fill="#24242c"/>
+      <text x="37" y="25" class="sans text" font-size="12" text-anchor="middle" font-weight="650">System</text>
+      <text x="103" y="25" class="sans muted" font-size="12" text-anchor="middle">Light</text>
+      <text x="169" y="25" class="sans muted" font-size="12" text-anchor="middle">Dark</text>
+    </g>
+    <g transform="translate(1272 119)">
+      <rect width="262" height="40" rx="10" fill="#2c2c35" stroke="#393944"/>
+      <rect x="4" y="4" width="122" height="32" rx="8" fill="#24242c"/>
+      <text x="65" y="25" class="sans" fill="#ddd5ff" font-size="12" text-anchor="middle" font-weight="700">Controls</text>
+      <text x="193" y="25" class="sans muted" font-size="12" text-anchor="middle">Docs</text>
+    </g>
+
+    <!-- Preview canvas -->
+    <rect x="322" y="178" width="838" height="686" fill="url(#canvas)"/>
+    <text x="352" y="212" class="sans muted tiny" font-weight="700">ISOLATED PREVIEW</text>
+    <g transform="translate(520 344)" filter="url(#soft)">
+      <rect width="448" height="236" rx="18" fill="url(#card)" stroke="#8b75f6" stroke-width="2"/>
+      <rect x="30" y="28" width="126" height="28" rx="14" fill="#39325a"/>
+      <circle cx="48" cy="42" r="5" fill="#53cf82"/>
+      <text x="62" y="47" class="sans" fill="#ddd5ff" font-size="12" font-weight="700">LIVE FIXTURE</text>
+      <text x="30" y="104" class="sans text" font-size="25" font-weight="750">Hot reload verified</text>
+      <text x="30" y="136" class="sans subtle" font-size="14">State-free GPUI component</text>
+      <line x1="30" y1="168" x2="418" y2="168" stroke="#393944"/>
+      <text x="30" y="205" class="sans" fill="#a2e8bb" font-size="14" font-weight="650">Active</text>
+      <text x="418" y="205" class="sans subtle" font-size="14" text-anchor="end">Count 3</text>
+    </g>
+
+    <!-- Controls inspector -->
+    <rect x="1160" y="178" width="404" height="686" fill="#24242c"/>
+    <line x1="1160" y1="178" x2="1160" y2="864" stroke="#393944"/>
+    <rect x="1160" y="178" width="404" height="54" fill="#24242c"/>
+    <line x1="1160" y1="232" x2="1564" y2="232" stroke="#393944"/>
+    <text x="1184" y="211" class="sans text tiny" font-weight="750">PROPERTIES</text>
+    <text x="1536" y="211" class="sans" fill="#ddd5ff" font-size="12" text-anchor="end" font-weight="700">Reset</text>
+
+    <g transform="translate(1184 258)">
+      <text x="0" y="0" class="sans text label">Active</text>
+      <text x="352" y="0" class="sans muted tiny" text-anchor="end">boolean</text>
+      <text x="0" y="25" class="sans muted" font-size="12">Controls whether the card appears active.</text>
+      <rect x="0" y="42" width="50" height="26" rx="13" fill="#8b75f6"/>
+      <circle cx="37" cy="55" r="9" fill="#f8f8f6"/>
+    </g>
+    <line x1="1160" y1="348" x2="1564" y2="348" stroke="#393944"/>
+
+    <g transform="translate(1184 378)">
+      <text x="0" y="0" class="sans text label">Label</text>
+      <text x="352" y="0" class="sans muted tiny" text-anchor="end">text</text>
+      <text x="0" y="25" class="sans muted" font-size="12">Main label rendered by the card.</text>
+      <rect x="0" y="42" width="352" height="58" rx="10" fill="#2c2c35" stroke="#4a4a57"/>
+      <text x="14" y="76" class="sans text" font-size="13">Hot reload verified</text>
+    </g>
+    <line x1="1160" y1="500" x2="1564" y2="500" stroke="#393944"/>
+
+    <g transform="translate(1184 530)">
+      <text x="0" y="0" class="sans text label">Count</text>
+      <text x="352" y="0" class="sans muted tiny" text-anchor="end">number</text>
+      <text x="0" y="25" class="sans muted" font-size="12">Number shown in the card's presentation data.</text>
+      <rect x="0" y="44" width="38" height="34" rx="8" fill="#24242c" stroke="#4a4a57"/>
+      <text x="19" y="67" class="sans" fill="#ddd5ff" font-size="17" text-anchor="middle">−</text>
+      <rect x="48" y="44" width="84" height="34" rx="8" fill="#2c2c35" stroke="#4a4a57"/>
+      <text x="90" y="67" class="sans text" font-size="13" text-anchor="middle">3</text>
+      <rect x="142" y="44" width="38" height="34" rx="8" fill="#24242c" stroke="#4a4a57"/>
+      <text x="161" y="67" class="sans" fill="#ddd5ff" font-size="17" text-anchor="middle">+</text>
+      <text x="0" y="98" class="sans muted" font-size="11">min 0 · max 10 · step 1</text>
+    </g>
+    <line x1="1160" y1="655" x2="1564" y2="655" stroke="#393944"/>
+
+    <g transform="translate(1184 687)">
+      <text x="0" y="0" class="sans text label">Accent</text>
+      <text x="352" y="0" class="sans muted tiny" text-anchor="end">enum</text>
+      <rect x="0" y="30" width="76" height="32" rx="8" fill="#8b75f6"/>
+      <text x="38" y="51" class="sans text" font-size="12" text-anchor="middle" font-weight="700">Violet</text>
+      <rect x="84" y="30" width="62" height="32" rx="8" fill="#24242c" stroke="#4a4a57"/>
+      <text x="115" y="51" class="sans" fill="#ddd5ff" font-size="12" text-anchor="middle">Jade</text>
+      <rect x="154" y="30" width="70" height="32" rx="8" fill="#24242c" stroke="#4a4a57"/>
+      <text x="189" y="51" class="sans" fill="#ddd5ff" font-size="12" text-anchor="middle">Ember</text>
+    </g>
+  </g>
+</svg>

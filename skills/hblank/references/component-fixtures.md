@@ -209,6 +209,8 @@ fn badge_docs() -> hblank::DocPage {
 Use a custom block only when the built-in heading, prose, fixture, props, controls, callout, and source blocks cannot express a project-specific visualization:
 
 ```rust
+use hblank::gpui::{IntoElement as _, div};
+
 #[hblank::doc_block]
 fn token_sample(context: &hblank::DocContext<'_>, payload: &str) -> hblank::gpui::AnyElement {
     div()
@@ -229,6 +231,14 @@ fn button_docs() -> hblank::DocPage {
 
 Register one `#[hblank::component]` renderer, then add any number of zero-argument `#[hblank::fixture(component = renderer, title = "…")]` factories returning the same props type. Canonical component and fixture ids derive from source path plus function symbol. The harness groups by component and nests variants in title/id order. `hblank list` emits canonical `path#function` ids; source-path launch selects the first variant, while `--fixture-id` selects one exact registration and rejects unknown ids before launch.
 
+## Migrating the removed fixture interface
+
+The pre-component form `#[hblank::fixture(id, title, group)] fn(&Props, Window, App)` no longer exists. Move that renderer to one `#[hblank::component(title, group)]` function, then create one zero-argument `#[hblank::fixture(component = renderer, title)] -> Props` factory for each named state. Delete explicit ids; canonical component and fixture ids now come only from project-relative source path plus function symbol.
+
+Migrate every fixture in the affected project rather than keeping two authoring models. Run `hblank list` afterward and update direct-launch commands, tests, or docs that stored old ids.
+
+Older private preview manifests must match the current `hblank init` template: `test-support` on both `gpui` and `hblank`, a direct GPUI dependency for `#[gpui::test]`, and `pub use hblank::gpui;` in preview main. Reconcile these files deliberately because `hblank init` refuses to overwrite them.
+
 ## Typed render handles in tests
 
 Add `handle = Type` only when tests need inspectable project state that cannot be asserted from fixture props. The renderer returns `Rendered<Handle, impl IntoElement>`; production catalog rendering erases the handle, while `render_handle!` calls the generated typed helper in inline tests.
@@ -242,10 +252,4 @@ Use `hblank::testing::draw_with_handle` with GPUI `TestAppContext::add_empty_win
 - Props field doc comments explain controls.
 - Production component docs remain on the production function/type.
 - Do not duplicate long prose in Hblank-specific files when the production docs already answer the user’s question; fixture docs should explain the showcased state.
-
-
-
-
-
-
 
