@@ -63,14 +63,10 @@ create_release() {
   if [[ -s "$notes_file" ]]; then
     gh release create "$tag" \
       --repo "$GITHUB_REPOSITORY" \
-      --target "$tag" \
-      --title "$tag" \
       --notes-file "$notes_file"
   else
     gh release create "$tag" \
       --repo "$GITHUB_REPOSITORY" \
-      --target "$tag" \
-      --title "$tag" \
       --generate-notes
   fi
 
