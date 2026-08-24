@@ -73,6 +73,10 @@ fn initializes_complete_preview_without_touching_host_files() {
         Some(source_runtime.to_string_lossy().as_ref())
     );
     assert_eq!(
+        parsed["dependencies"]["gpui"]["features"][0].as_str(),
+        Some("test-support")
+    );
+    assert_eq!(
         parsed["dependencies"]["hblank"]["features"][0].as_str(),
         Some("test-support")
     );

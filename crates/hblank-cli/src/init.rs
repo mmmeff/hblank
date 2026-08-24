@@ -181,6 +181,7 @@ publish = false
 [workspace]
 
 [dependencies]
+gpui = {{ version = "0.2.2", features = ["test-support"] }}
 hblank = {runtime_dependency}
 hblank_project = {{ package = "{package_name}", path = ".." }}
 "#
@@ -188,7 +189,9 @@ hblank_project = {{ package = "{package_name}", path = ".." }}
 }
 
 const fn preview_main() -> &'static str {
-    r#"mod fixtures {
+    r#"pub use hblank::gpui;
+
+mod fixtures {
     include!(concat!(env!("CARGO_MANIFEST_DIR"), "/generated/fixtures.rs"));
 }
 

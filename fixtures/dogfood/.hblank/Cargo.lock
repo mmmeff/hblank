@@ -2778,6 +2778,7 @@ dependencies = [
 name = "hblank-dogfood-hblank-preview"
 version = "0.0.0"
 dependencies = [
+ "gpui 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "hblank",
  "hblank-dogfood",
 ]

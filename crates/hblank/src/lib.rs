@@ -8,6 +8,9 @@ compile_error!("enable exactly one GPUI backend feature");
 mod docs;
 mod fixture;
 pub mod harness;
+mod rendered;
+#[cfg(feature = "test-support")]
+pub mod testing;
 mod theme;
 
 pub use docs::{CustomDocBlockRegistration, CustomDocRenderer, DocContext, registered_doc_block};
@@ -27,8 +30,10 @@ pub use hblank_core::{
     TextMode, ThemeMode, canonical_source_id,
 };
 pub use hblank_macros::{
-    HblankEnum, HblankProps, component, custom_doc, doc_block, fixture, fixture_ref, theme_hook,
+    HblankEnum, HblankProps, component, custom_doc, doc_block, fixture, fixture_ref, render_handle,
+    theme_hook,
 };
+pub use rendered::Rendered;
 pub use theme::{ThemeHook, ThemeHookRegistration, registered_theme_hook};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

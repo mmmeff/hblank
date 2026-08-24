@@ -294,6 +294,28 @@ While it runs:
 
 Hot reload is a safe supervised Rust rebuild, not unstable dynamic-library ABI loading.
 
+## Typed component tests
+
+A stateful renderer can opt into a typed handle without changing production rendering:
+
+```rust
+#[hblank::component(title = "Account card", group = "Components", handle = AccountHandle)]
+fn account_card_component(...) -> hblank::Rendered<AccountHandle, impl IntoElement> {
+    hblank::Rendered::new(account_card(...), handle)
+}
+
+#[gpui::test]
+fn account_card_updates(cx: &mut hblank::testing::TestAppContext) {
+    let cx = cx.add_empty_window();
+    let handle = hblank::testing::draw_with_handle(cx, size(px(640.), px(480.)), |window, app| {
+        hblank::render_handle!(account_card_component, &props, window, app)
+    });
+    assert_eq!(handle.status(), Status::Ready);
+}
+```
+
+The `testing` module re-exports GPUI's deterministic test contexts and adds fixture drawing, typed-handle drawing, and bounds-click helpers. Tests retain real project entities/handles and use ordinary Rust assertions; Hblank adds no selector or assertion DSL.
+
 ## Use Hblank to build Hblank
 
 The harness itself is GPUI-rendered. Its header, search, navigation, toolbar, canvas, controls panel, docs panel, and empty state are props-in/elements-out presentational functions under `hblank::harness`.
@@ -339,6 +361,7 @@ After setup, releases require no crates.io secret in GitHub.
 ## Project status
 
 Hblank is pre-1.0 and currently targets GPUI `0.2.2`. The core workflow is implemented and dogfooded: initialization, glob discovery, typed controls, Rustdoc extraction, GPUI navigation, and supervised hot reload.
+
 
 
 

@@ -160,6 +160,7 @@ struct ComponentArgs {
     title: Option<LitStr>,
     group: Option<LitStr>,
     docs: Option<Path>,
+    handle: Option<Type>,
 }
 
 #[proc_macro_attribute]
@@ -172,8 +173,10 @@ pub fn component(args: TokenStream, input: TokenStream) -> TokenStream {
             component_args.group = Some(meta.value()?.parse()?);
         } else if meta.path.is_ident("docs") {
             component_args.docs = Some(meta.value()?.parse()?);
+        } else if meta.path.is_ident("handle") {
+            component_args.handle = Some(meta.value()?.parse()?);
         } else {
-            return Err(meta.error("expected one of: title, group, docs"));
+            return Err(meta.error("expected one of: title, group, docs, handle"));
         }
         Ok(())
     });
@@ -202,6 +205,20 @@ fn expand_component(
     let doc_page = args
         .docs
         .map_or_else(|| quote!(), |docs| quote!(.with_docs(#docs())));
+    let handle_helper = args.handle.map_or_else(
+        || quote!(),
+        |handle| {
+            quote! {
+                pub(crate) fn render_with_handle(
+                    props: &#props_type,
+                    window: &mut ::hblank::gpui::Window,
+                    cx: &mut ::hblank::gpui::App,
+                ) -> (::hblank::gpui::AnyElement, #handle) {
+                    super::#function_name(props, window, cx).into_erased_parts()
+                }
+            }
+        },
+    );
 
     Ok(quote! {
         #function
@@ -215,6 +232,8 @@ fn expand_component(
             }
 
             pub(crate) fn assert_props(_: &#props_type) {}
+
+            #handle_helper
 
             pub(crate) fn build() -> ::hblank::ComponentDefinition {
                 fn render(
@@ -251,6 +270,43 @@ fn expand_component(
             ::hblank::ComponentRegistration { build: #module_name::build }
         }
     })
+}
+
+struct RenderHandleInput {
+    component: Path,
+    props: Expr,
+    window: Expr,
+    cx: Expr,
+}
+
+impl Parse for RenderHandleInput {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let component = input.parse()?;
+        input.parse::<syn::Token![,]>()?;
+        let props = input.parse()?;
+        input.parse::<syn::Token![,]>()?;
+        let window = input.parse()?;
+        input.parse::<syn::Token![,]>()?;
+        let cx = input.parse()?;
+        Ok(Self {
+            component,
+            props,
+            window,
+            cx,
+        })
+    }
+}
+
+#[proc_macro]
+pub fn render_handle(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as RenderHandleInput);
+    let props = input.props;
+    let window = input.window;
+    let cx = input.cx;
+    match component_module_path(&input.component) {
+        Ok(module) => quote!(#module::render_with_handle(#props, #window, #cx)).into(),
+        Err(error) => error.into_compile_error().into(),
+    }
 }
 
 struct CustomDocInput {

@@ -7,5 +7,7 @@ publish = false
 [workspace]
 
 [dependencies]
+gpui = { version = "0.2.2", features = ["test-support"] }
 hblank = { path = "../../../crates/hblank", features = ["test-support"] }
 hblank_project = { package = "hblank-dogfood", path = ".." }
+

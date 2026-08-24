@@ -229,6 +229,12 @@ fn button_docs() -> hblank::DocPage {
 
 Register one `#[hblank::component]` renderer, then add any number of zero-argument `#[hblank::fixture(component = renderer, title = "…")]` factories returning the same props type. Canonical component and fixture ids derive from source path plus function symbol. The harness groups by component and nests variants in title/id order; source-path launch selects the first variant in that hierarchy.
 
+## Typed render handles in tests
+
+Add `handle = Type` only when tests need inspectable project state that cannot be asserted from fixture props. The renderer returns `Rendered<Handle, impl IntoElement>`; production catalog rendering erases the handle, while `render_handle!` calls the generated typed helper in inline tests.
+
+Use `hblank::testing::draw_with_handle` with GPUI `TestAppContext::add_empty_window`. `draw_fixture` paints a registry fixture and `click_bounds` dispatches a primary click to known bounds. Keep typed entities/state as the assertion surface; do not invent text/role selectors over GPUI's missing semantics tree.
+
 ## Rustdoc placement
 
 - Component function doc comments become the generated component catalog description.
@@ -236,6 +242,7 @@ Register one `#[hblank::component]` renderer, then add any number of zero-argume
 - Props field doc comments explain controls.
 - Production component docs remain on the production function/type.
 - Do not duplicate long prose in Hblank-specific files when the production docs already answer the user’s question; fixture docs should explain the showcased state.
+
 
 
 

@@ -88,7 +88,9 @@ Selection and filter persist in `.hblank/state.toml`. The CLI assigns one `HBLAN
 
 `hblank init` enables the GPUI `test-support` feature in the private preview dependency. `hblank test` refreshes discovered imports and invokes ordinary `cargo test` against that generated manifest/target directory. Inline `#[cfg(test)]` modules in discovered fixture files therefore run in the same crate graph as the harness; `--filter` passes one Cargo test-name filter.
 
-Hblank does not auto-generate smoke tests, define assertions, or replace Cargo output. Only explicitly authored Rust/GPUI tests run.
+`Rendered<Handle, Content>` delegates `IntoElement` in production. A component declaring `handle = Type` receives a generated `render_with_handle` helper; `render_handle!` preserves its concrete handle while erasing only the element. Under `test-support`, `hblank::testing` re-exports GPUI test contexts and provides `draw_fixture`, `draw_with_handle`, and `click_bounds`.
+
+Hblank does not auto-generate smoke tests, define selectors/assertions, or replace Cargo output. Only explicitly authored Rust/GPUI tests run.
 
 ## Reload lifecycle
 
@@ -104,6 +106,7 @@ On relevant content change:
 6. stop the old preview after replacement is ready.
 
 A failed build leaves the old preview alive. Hblank deliberately avoids unstable Rust dynamic-library ABIs.
+
 
 
 

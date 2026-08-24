@@ -1,19 +1,30 @@
 use hblank::{CalloutTone, DocBlock, DocPage};
-use hblank::gpui::{App, IntoElement, Window, div, prelude::*, rgb};
+use hblank::gpui::{App, IntoElement, Window, div, prelude::*, px, rgb, size};
 use hblank_project::{FixtureCardProps, fixture_card};
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct FixtureCardHandle {
+    label: String,
+}
 
 #[hblank::component(
     title = "Fixture card",
     group = "Dogfood",
-    docs = fixture_card_docs
+    docs = fixture_card_docs,
+    handle = FixtureCardHandle
 )]
 /// A state-free GPUI card with generated boolean, text, numeric, and enum controls. Change any property to verify that the isolated preview rerenders immediately.
 fn fixture_card_fixture(
     props: &FixtureCardProps,
     window: &mut Window,
     cx: &mut App,
-) -> impl IntoElement {
-    fixture_card(props, window, cx)
+) -> hblank::Rendered<FixtureCardHandle, impl IntoElement> {
+    hblank::Rendered::new(
+        fixture_card(props, window, cx),
+        FixtureCardHandle {
+            label: props.label.clone(),
+        },
+    )
 }
 
 #[hblank::fixture(component = fixture_card_fixture, title = "Default")]
@@ -61,6 +72,21 @@ fn adoption_note(context: &hblank::DocContext<'_>, payload: &str) -> hblank::gpu
 mod tests {
     use super::*;
 
+    #[gpui::test]
+    fn component_render_exposes_typed_handle(cx: &mut hblank::testing::TestAppContext) {
+        let props = fixture_card_default();
+        let cx = cx.add_empty_window();
+        let handle = hblank::testing::draw_with_handle(
+            cx,
+            size(px(480.0), px(320.0)),
+            |window, app| {
+                hblank::render_handle!(fixture_card_fixture, &props, window, app)
+            },
+        );
+
+        assert_eq!(handle.label, "Hot reload verified");
+    }
+
     #[test]
     fn fixture_card_default_and_docs_are_explicit() {
         let props = fixture_card_default();
@@ -69,4 +95,6 @@ mod tests {
         assert_eq!(fixture_card_docs().blocks().len(), 8);
     }
 }
+
+
 
