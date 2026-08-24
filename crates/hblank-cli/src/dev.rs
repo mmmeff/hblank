@@ -3,7 +3,7 @@ use std::{
     fs,
     hash::{DefaultHasher, Hash, Hasher},
     path::{Path, PathBuf},
-    process::{Child, Command, ExitStatus, Stdio},
+    process::{Child, Command, Stdio},
     sync::mpsc,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -12,7 +12,8 @@ use notify::{RecursiveMode, Watcher};
 use thiserror::Error;
 
 use crate::{
-    Config, ConfigError, DiscoveredFixtureFile, GenerationError, refresh_generated_fixtures,
+    CatalogError, Config, ConfigError, DiscoveredFixtureFile, GenerationError, build_preview,
+    fixture_ids, preview_binary, refresh_generated_fixtures,
 };
 
 const DEBOUNCE: Duration = Duration::from_millis(160);
@@ -30,6 +31,7 @@ fn dev_session_id() -> String {
 pub struct DevOptions {
     pub project_root: PathBuf,
     pub fixture: Option<PathBuf>,
+    pub fixture_id: Option<String>,
 }
 
 impl DevOptions {
@@ -38,6 +40,7 @@ impl DevOptions {
         Self {
             project_root: project_root.into(),
             fixture: None,
+            fixture_id: None,
         }
     }
 
@@ -45,6 +48,12 @@ impl DevOptions {
     #[must_use]
     pub fn with_fixture(mut self, fixture: impl Into<PathBuf>) -> Self {
         self.fixture = Some(fixture.into());
+        self
+    }
+
+    #[must_use]
+    pub fn with_fixture_id(mut self, fixture_id: impl Into<String>) -> Self {
+        self.fixture_id = Some(fixture_id.into());
         self
     }
 }
@@ -79,8 +88,13 @@ pub fn run_dev(options: &DevOptions) -> Result<(), DevError> {
         println!("Opening fixture {}", fixture.display());
     }
 
-    let mut preview =
-        PreviewProcess::build_and_start(&project_root, &config, fixture.as_deref(), &session_id)?;
+    let mut preview = PreviewProcess::build_and_start(
+        &project_root,
+        &config,
+        fixture.as_deref(),
+        options.fixture_id.as_deref(),
+        &session_id,
+    )?;
     let (sender, receiver) = mpsc::channel();
     let mut watcher = notify::recommended_watcher(sender).map_err(DevError::Watcher)?;
     watcher
@@ -169,7 +183,7 @@ fn rebuild(
 ) -> Result<usize, DevError> {
     let generated = refresh_generated_fixtures(project_root, config)?;
     build_preview(project_root)?;
-    let replacement = spawn_preview(project_root, config, None, session_id)?;
+    let replacement = spawn_preview(project_root, config, None, None, session_id)?;
     preview.replace(replacement)?;
     Ok(generated.fixture_files.len())
 }
@@ -220,10 +234,17 @@ impl PreviewProcess {
         project_root: &Path,
         config: &Config,
         fixture: Option<&Path>,
+        fixture_id: Option<&str>,
         session_id: &str,
     ) -> Result<Self, DevError> {
         build_preview(project_root)?;
-        let child = spawn_preview(project_root, config, fixture, session_id)?;
+        if let Some(fixture_id) = fixture_id {
+            let ids = fixture_ids(project_root)?;
+            if !ids.iter().any(|candidate| candidate == fixture_id) {
+                return Err(DevError::FixtureIdNotFound(fixture_id.to_owned()));
+            }
+        }
+        let child = spawn_preview(project_root, config, fixture, fixture_id, session_id)?;
         Ok(Self { child })
     }
 
@@ -255,36 +276,14 @@ impl Drop for PreviewProcess {
     }
 }
 
-fn build_preview(project_root: &Path) -> Result<(), DevError> {
-    let manifest = project_root.join(".hblank/Cargo.toml");
-    let target = project_root.join(".hblank/target");
-    let status = Command::new("cargo")
-        .arg("build")
-        .arg("--manifest-path")
-        .arg(&manifest)
-        .arg("--target-dir")
-        .arg(&target)
-        .stdin(Stdio::null())
-        .status()
-        .map_err(DevError::Process)?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(DevError::BuildFailed(status))
-    }
-}
-
 fn spawn_preview(
     project_root: &Path,
     config: &Config,
     fixture: Option<&Path>,
+    fixture_id: Option<&str>,
     session_id: &str,
 ) -> Result<Child, DevError> {
-    let binary_name = preview_package_name(project_root)?;
-    let mut binary = project_root.join(".hblank/target/debug").join(binary_name);
-    if cfg!(windows) {
-        binary.set_extension("exe");
-    }
+    let binary = preview_binary(project_root)?;
     let mut command = Command::new(&binary);
     command
         .env("HBLANK_PROJECT_ROOT", project_root)
@@ -299,28 +298,12 @@ fn spawn_preview(
     if let Some(fixture) = fixture {
         command.env("HBLANK_INITIAL_FIXTURE", fixture);
     }
+    if let Some(fixture_id) = fixture_id {
+        command.env("HBLANK_INITIAL_FIXTURE_ID", fixture_id);
+    }
     command
         .spawn()
         .map_err(|source| DevError::Spawn { binary, source })
-}
-
-fn preview_package_name(project_root: &Path) -> Result<String, DevError> {
-    let path = project_root.join(".hblank/Cargo.toml");
-    let source = std::fs::read_to_string(&path).map_err(|source| DevError::ReadManifest {
-        path: path.clone(),
-        source,
-    })?;
-    let manifest =
-        toml::from_str::<toml::Value>(&source).map_err(|source| DevError::ParseManifest {
-            path: path.clone(),
-            source,
-        })?;
-    manifest
-        .get("package")
-        .and_then(|package| package.get("name"))
-        .and_then(toml::Value::as_str)
-        .map(str::to_owned)
-        .ok_or(DevError::MissingPreviewPackage(path))
 }
 
 #[derive(Debug, Error)]
@@ -334,6 +317,8 @@ pub enum DevError {
     Config(#[from] ConfigError),
     #[error(transparent)]
     Generation(#[from] GenerationError),
+    #[error(transparent)]
+    Catalog(#[from] CatalogError),
     #[error("could not resolve requested fixture path {path}: {source}")]
     FixturePath {
         path: PathBuf,
@@ -341,6 +326,8 @@ pub enum DevError {
     },
     #[error("requested fixture {0} is not matched by the configured fixture file patterns")]
     FixtureNotDiscovered(PathBuf),
+    #[error("no registered fixture uses canonical id '{0}'")]
+    FixtureIdNotFound(String),
     #[error("could not scan watched project sources: {0}")]
     FingerprintWalk(walkdir::Error),
     #[error("could not read watched project source {path}: {source}")]
@@ -354,8 +341,6 @@ pub enum DevError {
     WatchEvent(notify::Error),
     #[error("filesystem watcher disconnected")]
     WatcherDisconnected,
-    #[error("preview build exited unsuccessfully: {0}")]
-    BuildFailed(ExitStatus),
     #[error("could not manage preview process: {0}")]
     Process(std::io::Error),
     #[error("could not launch preview binary {binary}: {source}")]
@@ -363,18 +348,6 @@ pub enum DevError {
         binary: PathBuf,
         source: std::io::Error,
     },
-    #[error("could not read preview manifest at {path}: {source}")]
-    ReadManifest {
-        path: PathBuf,
-        source: std::io::Error,
-    },
-    #[error("could not parse preview manifest at {path}: {source}")]
-    ParseManifest {
-        path: PathBuf,
-        source: toml::de::Error,
-    },
-    #[error("preview manifest at {0} has no package name")]
-    MissingPreviewPackage(PathBuf),
 }
 
 #[cfg(test)]

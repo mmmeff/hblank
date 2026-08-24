@@ -16,7 +16,8 @@ mod theme;
 pub use docs::{CustomDocBlockRegistration, CustomDocRenderer, DocContext, registered_doc_block};
 pub use fixture::{
     ComponentDefinition, ComponentRegistration, FixtureDefinition, FixtureRegistration,
-    RegisteredCatalog, RenderComponent, registered_catalog, render_fixture,
+    RegisteredCatalog, RenderComponent, registered_catalog, registered_catalog_listing,
+    render_fixture,
 };
 #[cfg(feature = "crates-io-gpui")]
 pub use gpui_crates_io as gpui;

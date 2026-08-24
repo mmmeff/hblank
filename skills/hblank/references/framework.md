@@ -82,7 +82,7 @@ Projects opt into preview theme switching with one `#[hblank::theme_hook]` funct
 
 The GPUI harness owns selection, filtering, active inspector tab, editing target, and mutable fixture props. Presentational harness functions live separately under `hblank::harness`.
 
-Selection and filter persist in `.hblank/state.toml`. The CLI assigns one `HBLANK_SESSION_ID` to every preview process it supervises. Non-default control values are serialized by canonical fixture/control id and reapplied only when that session id matches, so successful rebuilds retain live work while a new `hblank dev` starts from source defaults. Stale or invalid values are ignored. `hblank dev --fixture PATH` still gives the requested source priority only for the first preview process.
+Selection and filter persist in `.hblank/state.toml`. The CLI assigns one `HBLANK_SESSION_ID` to every preview process it supervises. Non-default control values are serialized by canonical fixture/control id and reapplied only when that session id matches, so successful rebuilds retain live work while a new `hblank dev` starts from source defaults. Stale or invalid values are ignored. `hblank dev --fixture PATH` gives a requested source priority only for the first preview process. `hblank list` executes the built preview in headless catalog mode and emits stable tab-separated component/fixture records. `--fixture-id PATH#FUNCTION` validates against those runtime registrations before launch and passes the exact id only to the first process.
 
 ## Fixture tests
 
@@ -106,6 +106,7 @@ On relevant content change:
 6. stop the old preview after replacement is ready.
 
 A failed build leaves the old preview alive. Hblank deliberately avoids unstable Rust dynamic-library ABIs.
+
 
 
 

@@ -120,10 +120,12 @@ Rules:
 
 ### 5. Run the exact fixture
 
-Launch directly into the file being developed:
+List canonical ids, then launch either the first variant in a source file or one exact variant:
 
 ```bash
+hblank list --project .
 hblank dev --fixture src/badge.hblank.rs
+hblank dev --fixture-id 'src/badge.hblank.rs#badge_warning'
 ```
 
 With a separate project root:
@@ -132,7 +134,7 @@ With a separate project root:
 hblank dev --project crates/ui --fixture src/badge.hblank.rs
 ```
 
-Relative fixture paths resolve from `--project`; absolute paths also work. The file must match configured discovery. If it contains multiple fixtures, the first in deterministic navigation order opens.
+Relative fixture paths resolve from `--project`; absolute paths also work. Canonical ids are project-relative `path#function` values emitted by `hblank list`. `--fixture-id` is strict and fails before launch when no registration matches; do not hand-invent or alias ids.
 
 Keep `hblank dev` running while editing. Verify System/Light/Dark from the toolbar when the component is theme-sensitive; when `theme_hook` is configured, confirm both harness chrome and the production component switch. A successful build replaces the preview automatically and preserves the latest selection, theme mode, and non-default control values for that command's session. Starting a new `hblank dev` intentionally returns controls to source-defined fixture defaults. A failed build leaves the last successful preview open; fix the compiler error rather than restarting repeatedly.
 
@@ -182,6 +184,7 @@ Run `hblank test --project PATH` when fixture files contain explicit inline `#[t
 - Read [references/framework.md](references/framework.md) when changing configuration, discovery, macros, registration, preview startup, or hot reload.
 - Read [references/component-fixtures.md](references/component-fixtures.md) when creating props, enums, components, fixture adapters, or fixture functions.
 - Read [references/troubleshooting.md](references/troubleshooting.md) when discovery, compilation, controls, docs, direct fixture launch, or reload fails.
+
 
 
 

@@ -1,3 +1,5 @@
+use std::fmt::Write as _;
+
 use crate::gpui::{AnyElement, App, Window};
 
 use crate::HblankProps;
@@ -44,4 +46,32 @@ pub fn render_fixture(
     cx: &mut App,
 ) -> AnyElement {
     (fixture.renderer())(fixture.props(), window, cx)
+}
+
+/// Returns the registered catalog as stable tab-separated records for CLI discovery.
+///
+/// # Errors
+/// Returns registry validation errors before producing any records.
+pub fn registered_catalog_listing() -> Result<String, hblank_core::RegistryError> {
+    let catalog = registered_catalog()?;
+    let mut output = String::new();
+    for component in catalog.components() {
+        let metadata = component.metadata();
+        writeln!(
+            output,
+            "component\t{}\t{}\t{}",
+            metadata.id, metadata.title, metadata.group,
+        )
+        .expect("writing to String cannot fail");
+    }
+    for fixture in catalog.fixtures() {
+        let metadata = fixture.metadata();
+        writeln!(
+            output,
+            "fixture\t{}\t{}\t{}",
+            metadata.id, metadata.component_id, metadata.title,
+        )
+        .expect("writing to String cannot fail");
+    }
+    Ok(output)
 }

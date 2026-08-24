@@ -227,7 +227,7 @@ fn button_docs() -> hblank::DocPage {
 
 ## Multiple variants in one file
 
-Register one `#[hblank::component]` renderer, then add any number of zero-argument `#[hblank::fixture(component = renderer, title = "…")]` factories returning the same props type. Canonical component and fixture ids derive from source path plus function symbol. The harness groups by component and nests variants in title/id order; source-path launch selects the first variant in that hierarchy.
+Register one `#[hblank::component]` renderer, then add any number of zero-argument `#[hblank::fixture(component = renderer, title = "…")]` factories returning the same props type. Canonical component and fixture ids derive from source path plus function symbol. The harness groups by component and nests variants in title/id order. `hblank list` emits canonical `path#function` ids; source-path launch selects the first variant, while `--fixture-id` selects one exact registration and rejects unknown ids before launch.
 
 ## Typed render handles in tests
 
@@ -242,6 +242,7 @@ Use `hblank::testing::draw_with_handle` with GPUI `TestAppContext::add_empty_win
 - Props field doc comments explain controls.
 - Production component docs remain on the production function/type.
 - Do not duplicate long prose in Hblank-specific files when the production docs already answer the user’s question; fixture docs should explain the showcased state.
+
 
 
 

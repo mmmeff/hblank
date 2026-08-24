@@ -1,9 +1,12 @@
+mod catalog;
 mod config;
 mod dev;
 mod discovery;
 mod generate;
 mod init;
 mod test;
+pub use catalog::{CatalogError, CatalogOptions, run_list};
+pub(crate) use catalog::{build_preview, fixture_ids, preview_binary};
 pub use config::{CONFIG_PATH, Config, ConfigError, WindowConfig};
 pub use dev::{DevError, DevOptions, run_dev};
 pub use discovery::{DiscoveredFixtureFile, DiscoveryError, discover_fixture_files};

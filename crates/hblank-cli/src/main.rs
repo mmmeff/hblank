@@ -2,7 +2,9 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use hblank_cli::{DevOptions, InitOptions, TestOptions, initialize, run_dev, run_tests};
+use hblank_cli::{
+    CatalogOptions, DevOptions, InitOptions, TestOptions, initialize, run_dev, run_list, run_tests,
+};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -51,6 +53,15 @@ USAGE:
         /// Relative paths are resolved from --project; absolute paths are also accepted.
         #[arg(long, value_name = "PATH")]
         fixture: Option<PathBuf>,
+        /// Open one exact registered fixture by canonical project-relative path#function id.
+        #[arg(long, value_name = "ID", conflicts_with = "fixture")]
+        fixture_id: Option<String>,
+    },
+    /// Build and print registered components and canonical fixture ids.
+    List {
+        /// Initialized Rust package root whose catalog should be listed.
+        #[arg(long, default_value = ".")]
+        project: PathBuf,
     },
     /// Run explicit inline Rust tests from the generated Hblank preview target.
     Test {
@@ -78,11 +89,17 @@ fn main() -> Result<()> {
                 println!("  create {}", path.display());
             }
         }
-        Command::Dev { project, fixture } => {
+        Command::Dev {
+            project,
+            fixture,
+            fixture_id,
+        } => {
             let mut options = DevOptions::new(project);
             options.fixture = fixture;
+            options.fixture_id = fixture_id;
             run_dev(&options)?;
         }
+        Command::List { project } => run_list(&CatalogOptions::new(project))?,
         Command::Test { project, filter } => {
             let mut options = TestOptions::new(project);
             options.filter = filter;
@@ -112,6 +129,20 @@ mod tests {
     }
 
     #[test]
+    fn list_help_documents_registered_catalog() {
+        let mut command = Cli::command();
+        let list = command
+            .find_subcommand_mut("list")
+            .expect("list subcommand should exist");
+        let mut output = Vec::new();
+        list.write_long_help(&mut output)
+            .expect("list help should render");
+        let help = String::from_utf8(output).expect("help should be UTF-8");
+
+        assert!(help.contains("canonical fixture ids"));
+    }
+
+    #[test]
     fn test_help_documents_generated_cargo_target() {
         let mut command = Cli::command();
         let test = command
@@ -138,6 +169,8 @@ mod tests {
         let help = String::from_utf8(output).expect("help should be UTF-8");
 
         assert!(help.contains("--fixture <PATH>"));
+        assert!(help.contains("--fixture-id <ID>"));
+        assert!(help.contains("path#function"));
         assert!(help.contains("Relative fixture paths are resolved from --project"));
         assert!(help.contains("If a file registers multiple fixtures"));
         assert!(help.contains("hblank dev --project crates/ui --fixture src/card.hblank.rs"));

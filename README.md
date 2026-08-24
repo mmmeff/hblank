@@ -276,12 +276,14 @@ The hook receives both the selected System/Light/Dark mode and its resolved Ligh
 
 ```bash
 hblank dev
+hblank list
 hblank dev --fixture src/badge.hblank.rs
+hblank dev --fixture-id 'src/badge.hblank.rs#badge_warning'
 hblank test
 hblank test --filter fixture_card_default_and_docs_are_explicit
 ```
 
-`--fixture` opens directly to the first registered fixture in that source file. Relative paths resolve from `--project`; absolute paths work too. If a file contains multiple fixtures, Hblank chooses the first in deterministic navigation order.
+`hblank list` builds the preview and prints stable tab-separated component/fixture records. `--fixture PATH` opens the first variant from one discovered source file. `--fixture-id PATH#FUNCTION` preflights and opens exactly one canonical fixture; unknown ids fail before the window launches. The two selectors are mutually exclusive.
 
 While it runs:
 
@@ -334,8 +336,11 @@ That fixture is the contract: Hblank must remain capable of building and inspect
 hblank init [--project PATH] [--runtime-path PATH]
     Create .hblank config and preview boilerplate without overwriting files.
 
-hblank dev [--project PATH] [--fixture PATH]
-    Discover fixture files, optionally select a fixture path, launch the GPUI harness, and watch for changes.
+hblank dev [--project PATH] [--fixture PATH | --fixture-id ID]
+    Discover fixtures, optionally select a source path or exact canonical id, launch the GPUI harness, and watch.
+
+hblank list [--project PATH]
+    Build and print component plus canonical fixture records.
 
 hblank test [--project PATH] [--filter FILTER]
     Regenerate the private preview target and run only explicitly authored inline Rust tests with Cargo.
@@ -361,6 +366,7 @@ After setup, releases require no crates.io secret in GitHub.
 ## Project status
 
 Hblank is pre-1.0 and currently targets GPUI `0.2.2`. The core workflow is implemented and dogfooded: initialization, glob discovery, typed controls, Rustdoc extraction, GPUI navigation, and supervised hot reload.
+
 
 
 

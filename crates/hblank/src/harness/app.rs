@@ -19,8 +19,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ComponentDefinition, ControlKind, ControlValue, DocBlock, DocContext, FixtureDefinition,
-    ResolvedTheme, TextMode, ThemeHook, ThemeMode, registered_catalog, registered_doc_block,
-    registered_theme_hook, render_fixture,
+    ResolvedTheme, TextMode, ThemeHook, ThemeMode, registered_catalog, registered_catalog_listing,
+    registered_doc_block, registered_theme_hook, render_fixture,
 };
 
 use super::components::{
@@ -89,11 +89,15 @@ fn initial_selection<'a>(
     entries: impl Iterator<Item = (&'a str, &'a str)>,
     persisted_id: Option<&str>,
     fixture_source: Option<&str>,
+    fixture_id: Option<&str>,
 ) -> (Option<usize>, bool) {
     let mut first = None;
     let mut persisted = None;
     for (index, (id, source)) in entries.enumerate() {
         first.get_or_insert(index);
+        if fixture_id == Some(id) {
+            return (Some(index), true);
+        }
         if fixture_source == Some(source) {
             return (Some(index), true);
         }
@@ -185,6 +189,7 @@ impl HarnessApp {
             status = format!("Configured theme hook '{name}' is not registered").into();
         }
         let requested_fixture = env::var("HBLANK_INITIAL_FIXTURE").ok();
+        let requested_fixture_id = env::var("HBLANK_INITIAL_FIXTURE_ID").ok();
         let (selected, matched_fixture) = initial_selection(
             fixtures.iter().map(|fixture| {
                 let metadata = fixture.metadata();
@@ -192,9 +197,10 @@ impl HarnessApp {
             }),
             persisted.selected.as_deref(),
             requested_fixture.as_deref(),
+            requested_fixture_id.as_deref(),
         );
-        if requested_fixture.is_some() && !matched_fixture {
-            status = "Requested fixture contains no registered fixtures".into();
+        if (requested_fixture.is_some() || requested_fixture_id.is_some()) && !matched_fixture {
+            status = "Requested fixture does not match a registered variant".into();
         }
         let navigation = components
             .iter()
@@ -852,6 +858,16 @@ impl Render for HarnessApp {
 }
 
 pub fn run_harness() {
+    if env::var_os("HBLANK_LIST_CATALOG").is_some() {
+        match registered_catalog_listing() {
+            Ok(listing) => print!("{listing}"),
+            Err(error) => {
+                eprintln!("Hblank catalog registry error: {error}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     #[cfg(feature = "crates-io-gpui")]
     let application = Application::new();
     #[cfg(feature = "zed-gpui")]
@@ -989,6 +1005,23 @@ mod tests {
     }
 
     #[test]
+    fn requested_fixture_id_targets_one_variant() {
+        let entries = [
+            ("src/button.rs#default", "/project/src/button.rs"),
+            ("src/button.rs#loading", "/project/src/button.rs"),
+        ];
+
+        let selection = initial_selection(
+            entries.into_iter(),
+            None,
+            None,
+            Some("src/button.rs#loading"),
+        );
+
+        assert_eq!(selection, (Some(1), true));
+    }
+
+    #[test]
     fn requested_fixture_overrides_persisted_selection() {
         let entries = [
             ("first", "/project/src/first.hblank.rs"),
@@ -1000,6 +1033,7 @@ mod tests {
             entries.into_iter(),
             Some("first"),
             Some("/project/src/requested.hblank.rs"),
+            None,
         );
 
         assert_eq!(selection, (Some(1), true));
@@ -1016,6 +1050,7 @@ mod tests {
             entries.into_iter(),
             Some("persisted"),
             Some("/project/src/missing.hblank.rs"),
+            None,
         );
 
         assert_eq!(selection, (Some(1), false));
