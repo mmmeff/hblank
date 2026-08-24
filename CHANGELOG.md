@@ -1,3 +1,10 @@
+# [0.4.0](https://github.com/mmmeff/hblank/compare/v0.3.0...v0.4.0) (2026-08-24)
+
+
+### Features
+
+* remove zed-gpui backend to restore crates.io publishing ([d87c2d0](https://github.com/mmmeff/hblank/commit/d87c2d0203ce8de1bb2186919a04e3142a660747))
+
 # [0.3.0](https://github.com/mmmeff/hblank/compare/v0.2.0...v0.3.0) (2026-08-24)
 
 
