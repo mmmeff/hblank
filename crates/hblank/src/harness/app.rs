@@ -18,7 +18,7 @@ use super::components::{
     CanvasProps, ControlAction, ControlsPanelProps, DocsPanelProps, EmptyStateProps, HeaderProps,
     InspectorTab, NavigationAction, NavigationItem, NavigationProps, SearchAction, SearchProps,
     ToolbarAction, ToolbarProps, UiHandler, canvas, controls_panel, docs_panel, empty_state,
-    header, navigation, search, toolbar,
+    header, navigation, search, theme, toolbar,
 };
 
 const DEFAULT_WIDTH: f32 = 1440.0;
@@ -422,8 +422,8 @@ impl Render for HarnessApp {
             .size_full()
             .flex()
             .flex_col()
-            .bg(rgb(0xf5f5f1))
-            .text_color(rgb(0x26262a))
+            .bg(rgb(theme::CANVAS))
+            .text_color(rgb(theme::TEXT))
             .child(header(HeaderProps {
                 project: self.project.clone(),
                 example_count: self.examples.len(),
@@ -441,7 +441,7 @@ impl Render for HarnessApp {
                             .flex_none()
                             .flex()
                             .flex_col()
-                            .bg(rgb(0x1d1d22))
+                            .bg(rgb(theme::SIDEBAR))
                             .child(search_surface)
                             .child(navigation_surface),
                     )

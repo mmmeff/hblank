@@ -6,6 +6,37 @@ use gpui::{AnyElement, App, Div, FontWeight, SharedString, Window, div, prelude:
 
 use crate::{ControlDefinition, ControlKind, ControlValue, HblankProps};
 
+pub(super) mod theme {
+    pub const CHROME: u32 = 0x17171c;
+    pub const CHROME_RAISED: u32 = 0x24242c;
+    pub const CHROME_BORDER: u32 = 0x32323c;
+    pub const SIDEBAR: u32 = 0x1d1d24;
+    pub const SIDEBAR_HOVER: u32 = 0x292932;
+    pub const SIDEBAR_SELECTED: u32 = 0x39325a;
+    pub const SIDEBAR_SELECTED_HOVER: u32 = 0x44396c;
+    pub const CHROME_TEXT: u32 = 0xf8f8f6;
+    pub const CHROME_TEXT_MUTED: u32 = 0xb0b0bb;
+    pub const SIDEBAR_TEXT: u32 = 0xd1d1d9;
+    pub const SIDEBAR_TEXT_MUTED: u32 = 0x9999a5;
+    pub const PAPER: u32 = 0xffffff;
+    pub const CANVAS: u32 = 0xf4f4f0;
+    pub const SURFACE_SUBTLE: u32 = 0xf1f1ed;
+    pub const LINE: u32 = 0xe5e5df;
+    pub const LINE_STRONG: u32 = 0xd8d8d2;
+    pub const TEXT: u32 = 0x29292e;
+    pub const TEXT_MUTED: u32 = 0x66666f;
+    pub const TEXT_SUBTLE: u32 = 0x74747e;
+    pub const ACCENT: u32 = 0x7559e8;
+    pub const ACCENT_HOVER: u32 = 0x6347d4;
+    pub const ACCENT_WASH: u32 = 0xeeeaff;
+    pub const ACCENT_INK: u32 = 0x3e2b86;
+    pub const SUCCESS: u32 = 0x53cf82;
+    pub const SUCCESS_TEXT: u32 = 0xa2e8bb;
+    pub const ERROR: u32 = 0xf18175;
+    pub const ERROR_INK: u32 = 0x9e3f37;
+    pub const ERROR_TEXT: u32 = 0xffb4ab;
+}
+
 pub type UiHandler<T> = Rc<dyn Fn(&T, &mut Window, &mut App)>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -23,17 +54,18 @@ pub struct HeaderProps {
 
 #[must_use]
 pub fn header(props: HeaderProps) -> Div {
+    let ready = props.status.as_ref() == "Ready";
     div()
-        .h(px(54.0))
+        .h(px(58.0))
         .flex_none()
         .flex()
         .items_center()
         .justify_between()
-        .px_4()
-        .bg(rgb(0x17171a))
+        .px_5()
+        .bg(rgb(theme::CHROME))
         .border_b_1()
-        .border_color(rgb(0x303036))
-        .text_color(rgb(0xf8f8f6))
+        .border_color(rgb(theme::CHROME_BORDER))
+        .text_color(rgb(theme::CHROME_TEXT))
         .child(
             div()
                 .flex()
@@ -41,31 +73,31 @@ pub fn header(props: HeaderProps) -> Div {
                 .gap_3()
                 .child(
                     div()
-                        .w(px(30.0))
-                        .h(px(30.0))
+                        .size_8()
                         .flex()
                         .items_center()
                         .justify_center()
-                        .rounded_md()
-                        .bg(rgb(0x7357d8))
+                        .rounded_lg()
+                        .bg(rgb(theme::ACCENT))
                         .font_weight(FontWeight::BOLD)
                         .child("H"),
                 )
                 .child(
                     div()
                         .flex()
-                        .items_baseline()
-                        .gap_2()
+                        .items_center()
+                        .gap_3()
                         .child(
                             div()
                                 .text_sm()
                                 .font_weight(FontWeight::SEMIBOLD)
                                 .child("hblank"),
                         )
+                        .child(div().w(px(1.0)).h_4().bg(rgb(theme::CHROME_BORDER)))
                         .child(
                             div()
                                 .text_xs()
-                                .text_color(rgb(0xa9a9b2))
+                                .text_color(rgb(theme::CHROME_TEXT_MUTED))
                                 .child(props.project),
                         ),
                 ),
@@ -78,20 +110,34 @@ pub fn header(props: HeaderProps) -> Div {
                 .text_xs()
                 .child(
                     div()
+                        .border_1()
+                        .border_color(rgb(theme::CHROME_BORDER))
                         .rounded_full()
-                        .bg(rgb(0x29292f))
+                        .bg(rgb(theme::CHROME_RAISED))
                         .px_3()
                         .py_1()
-                        .text_color(rgb(0xc8c8d0))
-                        .child(format!("{} examples", props.example_count)),
+                        .text_color(rgb(theme::SIDEBAR_TEXT))
+                        .child(format!(
+                            "{} example{}",
+                            props.example_count,
+                            if props.example_count == 1 { "" } else { "s" }
+                        )),
                 )
                 .child(
                     div()
                         .flex()
                         .items_center()
                         .gap_2()
-                        .text_color(rgb(0x9fe4b2))
-                        .child(div().size_2().rounded_full().bg(rgb(0x53c878)))
+                        .text_color(rgb(if ready {
+                            theme::SUCCESS_TEXT
+                        } else {
+                            theme::ERROR_TEXT
+                        }))
+                        .child(div().size_2().rounded_full().bg(rgb(if ready {
+                            theme::SUCCESS
+                        } else {
+                            theme::ERROR
+                        })))
                         .child(props.status),
                 ),
         )
@@ -109,28 +155,40 @@ pub struct SearchAction;
 #[must_use]
 pub fn search(props: SearchProps, on_focus: UiHandler<SearchAction>) -> impl IntoElement {
     let empty = props.query.is_empty();
+    let active = props.active;
     div()
         .id("hblank-search")
         .mx_3()
-        .mt_3()
-        .mb_2()
-        .h(px(36.0))
+        .mt_4()
+        .mb_3()
+        .h(px(40.0))
         .flex_none()
         .flex()
         .items_center()
         .px_3()
-        .rounded_md()
+        .rounded_lg()
         .border_1()
-        .border_color(if props.active {
-            rgb(0x876ff0)
+        .border_color(if active {
+            rgb(theme::ACCENT)
         } else {
-            rgb(0x3a3a42)
+            rgb(theme::CHROME_BORDER)
         })
-        .bg(rgb(0x232329))
+        .bg(rgb(theme::CHROME_RAISED))
         .text_sm()
-        .text_color(if empty { rgb(0x85858f) } else { rgb(0xf0f0ee) })
+        .text_color(if empty {
+            rgb(theme::SIDEBAR_TEXT_MUTED)
+        } else {
+            rgb(theme::CHROME_TEXT)
+        })
         .cursor_pointer()
-        .hover(|this| this.border_color(rgb(0x686875)))
+        .hover(move |this| {
+            this.border_color(rgb(if active {
+                theme::ACCENT
+            } else {
+                theme::CHROME_TEXT_MUTED
+            }))
+        })
+        .active(|this| this.bg(rgb(theme::SIDEBAR_HOVER)))
         .on_click(move |_, window, cx| on_focus(&SearchAction, window, cx))
         .child(if empty {
             SharedString::from("Filter examples…")
@@ -160,7 +218,6 @@ pub struct NavigationAction {
 
 #[must_use]
 pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAction>) -> Div {
-    let on_select = Rc::clone(on_select);
     let query = props.query.to_ascii_lowercase();
     let visible = props.items.iter().filter(|item| {
         query.is_empty()
@@ -168,49 +225,42 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
             || item.group.to_ascii_lowercase().contains(&query)
     });
     let mut previous_group = None;
+    let mut visible_count = 0;
     let mut children = Vec::new();
     for (index, item) in visible.enumerate() {
+        visible_count += 1;
         if previous_group != Some(item.group) {
             previous_group = Some(item.group);
             children.push(
                 div()
-                    .mt_3()
+                    .mt_4()
                     .mb_1()
-                    .px_3()
+                    .px_4()
                     .text_xs()
                     .font_weight(FontWeight::SEMIBOLD)
-                    .text_color(rgb(0x878791))
+                    .text_color(rgb(theme::SIDEBAR_TEXT_MUTED))
                     .child(item.group)
                     .into_any_element(),
             );
         }
-        let action = NavigationAction { id: item.id };
-        let handler = on_select.clone();
-        let selected = props.selected == Some(item.id);
+        children.push(navigation_row(
+            index,
+            item,
+            props.selected == Some(item.id),
+            on_select,
+        ));
+    }
+    if visible_count == 0 {
         children.push(
             div()
-                .id(("hblank-nav", index))
-                .mx_2()
-                .h(px(34.0))
-                .flex()
-                .items_center()
-                .px_3()
-                .rounded_md()
+                .mx_3()
+                .mt_5()
+                .p_4()
+                .rounded_lg()
+                .bg(rgb(theme::CHROME_RAISED))
                 .text_sm()
-                .cursor_pointer()
-                .bg(if selected {
-                    rgb(0x332e4d)
-                } else {
-                    rgb(0x1d1d22)
-                })
-                .text_color(if selected {
-                    rgb(0xded7ff)
-                } else {
-                    rgb(0xc4c4cb)
-                })
-                .hover(|this| this.bg(rgb(0x292930)).text_color(rgb(0xffffff)))
-                .on_click(move |_, window, cx| handler(&action, window, cx))
-                .child(item.title)
+                .text_color(rgb(theme::SIDEBAR_TEXT_MUTED))
+                .child("No matching examples")
                 .into_any_element(),
         );
     }
@@ -221,9 +271,9 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
         .min_h_0()
         .flex()
         .flex_col()
-        .bg(rgb(0x1d1d22))
+        .bg(rgb(theme::SIDEBAR))
         .border_r_1()
-        .border_color(rgb(0x303036))
+        .border_color(rgb(theme::CHROME_BORDER))
         .child(
             div()
                 .id("hblank-navigation-scroll")
@@ -238,11 +288,67 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
                 .px_3()
                 .py_3()
                 .border_t_1()
-                .border_color(rgb(0x303036))
+                .border_color(rgb(theme::CHROME_BORDER))
                 .text_xs()
-                .text_color(rgb(0x777781))
-                .child("Type to filter · ↑↓ to navigate"),
+                .text_color(rgb(theme::SIDEBAR_TEXT_MUTED))
+                .child("Type to filter · Arrow keys to navigate"),
         )
+}
+
+fn navigation_row(
+    index: usize,
+    item: &NavigationItem,
+    selected: bool,
+    on_select: &UiHandler<NavigationAction>,
+) -> AnyElement {
+    let action = NavigationAction { id: item.id };
+    let handler = Rc::clone(on_select);
+    div()
+        .id(("hblank-nav", index))
+        .mx_2()
+        .h(px(36.0))
+        .flex()
+        .items_center()
+        .px_3()
+        .rounded_md()
+        .border_1()
+        .border_color(rgb(if selected {
+            theme::ACCENT
+        } else {
+            theme::SIDEBAR
+        }))
+        .text_sm()
+        .cursor_pointer()
+        .bg(if selected {
+            rgb(theme::SIDEBAR_SELECTED)
+        } else {
+            rgb(theme::SIDEBAR)
+        })
+        .text_color(if selected {
+            rgb(theme::CHROME_TEXT)
+        } else {
+            rgb(theme::SIDEBAR_TEXT)
+        })
+        .hover(move |this| {
+            if selected {
+                this.bg(rgb(theme::SIDEBAR_SELECTED_HOVER))
+                    .border_color(rgb(theme::ACCENT))
+            } else {
+                this.bg(rgb(theme::SIDEBAR_HOVER))
+                    .border_color(rgb(theme::CHROME_BORDER))
+            }
+            .text_color(rgb(theme::CHROME_TEXT))
+        })
+        .active(move |this| {
+            this.bg(rgb(if selected {
+                theme::SIDEBAR_SELECTED_HOVER
+            } else {
+                theme::CHROME_RAISED
+            }))
+        })
+        .on_click(move |_, window, cx| handler(&action, window, cx))
+        .child(item.title)
+        .into_any_element()
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -263,18 +369,20 @@ pub fn toolbar(props: ToolbarProps, on_action: UiHandler<ToolbarAction>) -> Div 
     let controls_handler = on_action.clone();
     let docs_handler = on_action;
     div()
-        .h(px(58.0))
+        .h(px(64.0))
         .flex_none()
         .flex()
         .items_center()
         .justify_between()
-        .px_4()
-        .bg(rgb(0xffffff))
+        .px_5()
+        .bg(rgb(theme::PAPER))
         .border_b_1()
-        .border_color(rgb(0xe4e4e0))
+        .border_color(rgb(theme::LINE))
         .child(
             div()
+                .flex_1()
                 .min_w_0()
+                .mr_4()
                 .flex()
                 .flex_col()
                 .gap_1()
@@ -282,23 +390,27 @@ pub fn toolbar(props: ToolbarProps, on_action: UiHandler<ToolbarAction>) -> Div 
                     div()
                         .text_sm()
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(rgb(0x202024))
+                        .text_color(rgb(theme::TEXT))
                         .child(props.title),
                 )
                 .child(
                     div()
+                        .min_w_0()
                         .text_xs()
-                        .text_color(rgb(0x77777f))
+                        .text_color(rgb(theme::TEXT_SUBTLE))
                         .child(props.source),
                 ),
         )
         .child(
             div()
+                .flex_none()
                 .flex()
                 .items_center()
                 .gap_1()
-                .rounded_md()
-                .bg(rgb(0xf0f0ed))
+                .rounded_lg()
+                .border_1()
+                .border_color(rgb(theme::LINE))
+                .bg(rgb(theme::SURFACE_SUBTLE))
                 .p_1()
                 .child(tab_button(
                     "Controls",
@@ -324,7 +436,7 @@ fn tab_button(
 ) -> impl IntoElement {
     div()
         .id(label)
-        .h(px(30.0))
+        .h(px(32.0))
         .flex()
         .items_center()
         .px_3()
@@ -333,16 +445,25 @@ fn tab_button(
         .font_weight(FontWeight::SEMIBOLD)
         .cursor_pointer()
         .bg(if selected {
-            rgb(0xffffff)
+            rgb(theme::PAPER)
         } else {
-            rgb(0xf0f0ed)
+            rgb(theme::SURFACE_SUBTLE)
         })
         .text_color(if selected {
-            rgb(0x312765)
+            rgb(theme::ACCENT_INK)
         } else {
-            rgb(0x6f6f76)
+            rgb(theme::TEXT_MUTED)
         })
-        .hover(|this| this.text_color(rgb(0x312765)))
+        .when(selected, gpui::Styled::shadow_sm)
+        .hover(move |this| {
+            if selected {
+                this.text_color(rgb(theme::ACCENT_INK))
+            } else {
+                this.bg(rgb(theme::ACCENT_WASH))
+                    .text_color(rgb(theme::ACCENT_INK))
+            }
+        })
+        .active(|this| this.bg(rgb(theme::ACCENT_WASH)))
         .on_click(move |_, window, cx| on_click(window, cx))
         .child(label)
 }
@@ -360,16 +481,19 @@ pub fn canvas(props: CanvasProps, preview: AnyElement) -> Div {
         .min_h_0()
         .flex()
         .flex_col()
-        .bg(rgb(0xf5f5f1))
+        .bg(rgb(theme::CANVAS))
         .child(
             div()
-                .h(px(34.0))
+                .h(px(38.0))
                 .flex_none()
                 .flex()
                 .items_center()
-                .justify_center()
+                .px_5()
+                .border_b_1()
+                .border_color(rgb(theme::LINE))
                 .text_xs()
-                .text_color(rgb(0x898990))
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_color(rgb(theme::TEXT_SUBTLE))
                 .child(props.label),
         )
         .child(
@@ -386,14 +510,12 @@ pub fn canvas(props: CanvasProps, preview: AnyElement) -> Div {
                     div()
                         .min_w(px(280.0))
                         .min_h(px(180.0))
-                        .p_6()
+                        .p_8()
                         .flex()
                         .items_center()
                         .justify_center()
-                        .rounded_lg()
-                        .bg(rgb(0xffffff))
-                        .border_1()
-                        .border_color(rgb(0xe1e1dc))
+                        .rounded_xl()
+                        .bg(rgb(theme::PAPER))
                         .shadow_md()
                         .child(preview),
                 ),
@@ -444,33 +566,43 @@ pub fn controls_panel(props: ControlsPanelProps<'_>, on_action: UiHandler<Contro
         .flex_none()
         .flex()
         .flex_col()
-        .bg(rgb(0xffffff))
+        .bg(rgb(theme::PAPER))
         .border_l_1()
-        .border_color(rgb(0xe4e4e0))
+        .border_color(rgb(theme::LINE))
         .child(
             div()
-                .h(px(44.0))
+                .h(px(48.0))
                 .flex_none()
                 .flex()
                 .items_center()
                 .justify_between()
                 .px_4()
                 .border_b_1()
-                .border_color(rgb(0xe9e9e5))
+                .border_color(rgb(theme::LINE))
                 .child(
                     div()
                         .text_xs()
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(rgb(0x333338))
+                        .text_color(rgb(theme::TEXT))
                         .child("PROPERTIES"),
                 )
                 .child(
                     div()
                         .id("hblank-reset")
+                        .h(px(32.0))
+                        .flex()
+                        .items_center()
+                        .px_3()
+                        .rounded_md()
                         .text_xs()
-                        .text_color(rgb(0x6f56c9))
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_color(rgb(theme::ACCENT_HOVER))
                         .cursor_pointer()
-                        .hover(|this| this.text_color(rgb(0x4c369f)))
+                        .hover(|this| {
+                            this.bg(rgb(theme::ACCENT_WASH))
+                                .text_color(rgb(theme::ACCENT_INK))
+                        })
+                        .active(|this| this.bg(rgb(theme::LINE)))
                         .on_click(move |_, window, cx| {
                             reset_handler(&ControlAction::Reset, window, cx);
                         })
@@ -499,7 +631,7 @@ fn control_row(
         .px_4()
         .py_4()
         .border_b_1()
-        .border_color(rgb(0xeeeeea))
+        .border_color(rgb(theme::LINE))
         .child(
             div()
                 .mb_2()
@@ -510,13 +642,13 @@ fn control_row(
                     div()
                         .text_sm()
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(rgb(0x303034))
+                        .text_color(rgb(theme::TEXT))
                         .child(definition.label),
                 )
                 .child(
                     div()
                         .text_xs()
-                        .text_color(rgb(0x919198))
+                        .text_color(rgb(theme::TEXT_SUBTLE))
                         .child(definition.kind.name()),
                 ),
         )
@@ -525,7 +657,7 @@ fn control_row(
                 div()
                     .mb_3()
                     .text_xs()
-                    .text_color(rgb(0x74747c))
+                    .text_color(rgb(theme::TEXT_MUTED))
                     .child(definition.docs),
             )
         })
@@ -555,7 +687,7 @@ fn control_input(
         }
         _ => div()
             .text_xs()
-            .text_color(rgb(0xb64141))
+            .text_color(rgb(theme::ERROR_INK))
             .child("Control value unavailable")
             .into_any_element(),
     }
@@ -573,7 +705,7 @@ fn boolean_control(
     };
     div()
         .id(("hblank-bool", index))
-        .w(px(42.0))
+        .w(px(44.0))
         .h(px(24.0))
         .p_1()
         .flex()
@@ -581,10 +713,28 @@ fn boolean_control(
         .justify_end()
         .rounded_full()
         .cursor_pointer()
-        .bg(if value { rgb(0x7357d8) } else { rgb(0xd7d7d2) })
+        .bg(if value {
+            rgb(theme::ACCENT)
+        } else {
+            rgb(theme::LINE_STRONG)
+        })
         .when(!value, gpui::Styled::justify_start)
+        .hover(move |this| {
+            this.bg(rgb(if value {
+                theme::ACCENT_HOVER
+            } else {
+                theme::CHROME_TEXT_MUTED
+            }))
+        })
+        .active(|this| this.bg(rgb(theme::ACCENT_HOVER)))
         .on_click(move |_, window, cx| handler(&action, window, cx))
-        .child(div().size_4().rounded_full().bg(rgb(0xffffff)))
+        .child(
+            div()
+                .size_4()
+                .rounded_full()
+                .bg(rgb(theme::PAPER))
+                .shadow_sm(),
+        )
         .into_any_element()
 }
 
@@ -596,9 +746,10 @@ fn text_control(
     handler: UiHandler<ControlAction>,
 ) -> AnyElement {
     let action = ControlAction::EditText { id };
+    let empty = value.is_empty();
     div()
         .id(("hblank-text", index))
-        .min_h(px(34.0))
+        .min_h(px(36.0))
         .w_full()
         .flex()
         .items_center()
@@ -606,16 +757,28 @@ fn text_control(
         .rounded_md()
         .border_1()
         .border_color(if editing {
-            rgb(0x7357d8)
+            rgb(theme::ACCENT)
         } else {
-            rgb(0xdededa)
+            rgb(theme::LINE_STRONG)
         })
-        .bg(rgb(0xfafaf8))
+        .bg(rgb(theme::PAPER))
         .text_sm()
-        .text_color(rgb(0x343438))
+        .text_color(if empty {
+            rgb(theme::TEXT_SUBTLE)
+        } else {
+            rgb(theme::TEXT)
+        })
         .cursor_pointer()
+        .hover(move |this| {
+            this.border_color(rgb(if editing {
+                theme::ACCENT
+            } else {
+                theme::CHROME_TEXT_MUTED
+            }))
+        })
+        .active(|this| this.bg(rgb(theme::SURFACE_SUBTLE)))
         .on_click(move |_, window, cx| handler(&action, window, cx))
-        .child(if value.is_empty() {
+        .child(if empty {
             SharedString::from("Type a value…")
         } else {
             SharedString::from(value)
@@ -649,16 +812,16 @@ fn number_control(
         .child(
             div()
                 .w(px(72.0))
-                .h(px(32.0))
+                .h(px(34.0))
                 .flex()
                 .items_center()
                 .justify_center()
                 .rounded_md()
                 .border_1()
-                .border_color(rgb(0xdededa))
-                .bg(rgb(0xfafaf8))
+                .border_color(rgb(theme::LINE_STRONG))
+                .bg(rgb(theme::SURFACE_SUBTLE))
                 .text_sm()
-                .text_color(rgb(0x343438))
+                .text_color(rgb(theme::TEXT))
                 .child(format_number(value)),
         )
         .child(step_button(index * 2 + 1, "+", move |window, cx| {
@@ -687,25 +850,40 @@ fn enum_control(
             let is_selected = selected == *option;
             div()
                 .id(("hblank-enum", index * 100 + option_index))
-                .h(px(30.0))
+                .h(px(32.0))
                 .flex()
                 .items_center()
                 .px_3()
                 .rounded_md()
                 .border_1()
                 .border_color(if is_selected {
-                    rgb(0x7357d8)
+                    rgb(theme::ACCENT)
                 } else {
-                    rgb(0xdededa)
+                    rgb(theme::LINE_STRONG)
                 })
                 .bg(if is_selected {
-                    rgb(0xf0ecff)
+                    rgb(theme::ACCENT)
                 } else {
-                    rgb(0xffffff)
+                    rgb(theme::PAPER)
                 })
                 .text_xs()
-                .text_color(rgb(0x3b3459))
+                .text_color(if is_selected {
+                    rgb(theme::CHROME_TEXT)
+                } else {
+                    rgb(theme::ACCENT_INK)
+                })
+                .when(is_selected, |this| this.font_weight(FontWeight::SEMIBOLD))
                 .cursor_pointer()
+                .hover(move |this| {
+                    if is_selected {
+                        this.bg(rgb(theme::ACCENT_HOVER))
+                            .border_color(rgb(theme::ACCENT_HOVER))
+                    } else {
+                        this.bg(rgb(theme::ACCENT_WASH))
+                            .border_color(rgb(theme::ACCENT))
+                    }
+                })
+                .active(|this| this.bg(rgb(theme::ACCENT_HOVER)))
                 .on_click(move |_, window, cx| option_handler(&action, window, cx))
                 .child(*option)
         }))
@@ -725,11 +903,15 @@ fn step_button(
         .justify_center()
         .rounded_md()
         .border_1()
-        .border_color(rgb(0xdededa))
-        .bg(rgb(0xffffff))
-        .text_color(rgb(0x514c67))
+        .border_color(rgb(theme::LINE_STRONG))
+        .bg(rgb(theme::PAPER))
+        .text_color(rgb(theme::ACCENT_INK))
         .cursor_pointer()
-        .hover(|this| this.bg(rgb(0xf2efff)).border_color(rgb(0xa695e7)))
+        .hover(|this| {
+            this.bg(rgb(theme::ACCENT_WASH))
+                .border_color(rgb(theme::ACCENT))
+        })
+        .active(|this| this.bg(rgb(theme::LINE)))
         .on_click(move |_, window, cx| on_click(window, cx))
         .child(label)
 }
@@ -758,21 +940,21 @@ pub fn docs_panel(props: DocsPanelProps) -> Div {
         .flex_none()
         .flex()
         .flex_col()
-        .bg(rgb(0xffffff))
+        .bg(rgb(theme::PAPER))
         .border_l_1()
-        .border_color(rgb(0xe4e4e0))
+        .border_color(rgb(theme::LINE))
         .child(
             div()
-                .h(px(44.0))
+                .h(px(48.0))
                 .flex_none()
                 .flex()
                 .items_center()
                 .px_4()
                 .border_b_1()
-                .border_color(rgb(0xe9e9e5))
+                .border_color(rgb(theme::LINE))
                 .text_xs()
                 .font_weight(FontWeight::SEMIBOLD)
-                .text_color(rgb(0x333338))
+                .text_color(rgb(theme::TEXT))
                 .child("DOCUMENTATION"),
         )
         .child(
@@ -784,10 +966,10 @@ pub fn docs_panel(props: DocsPanelProps) -> Div {
                 .p_5()
                 .child(
                     div()
-                        .mb_4()
+                        .mb_3()
                         .text_lg()
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(rgb(0x26262a))
+                        .text_color(rgb(theme::TEXT))
                         .child(props.title),
                 )
                 .child(
@@ -795,9 +977,9 @@ pub fn docs_panel(props: DocsPanelProps) -> Div {
                         .mb_5()
                         .text_sm()
                         .text_color(if has_docs {
-                            rgb(0x55555d)
+                            rgb(theme::TEXT_MUTED)
                         } else {
-                            rgb(0x898991)
+                            rgb(theme::TEXT_SUBTLE)
                         })
                         .child(if has_docs {
                             props.docs
@@ -807,11 +989,11 @@ pub fn docs_panel(props: DocsPanelProps) -> Div {
                 )
                 .child(
                     div()
-                        .pt_4()
-                        .border_t_1()
-                        .border_color(rgb(0xe9e9e5))
+                        .p_3()
+                        .rounded_lg()
+                        .bg(rgb(theme::SURFACE_SUBTLE))
                         .text_xs()
-                        .text_color(rgb(0x85858d))
+                        .text_color(rgb(theme::TEXT_SUBTLE))
                         .child(props.source),
                 ),
         )
@@ -831,24 +1013,44 @@ pub fn empty_state(props: EmptyStateProps) -> Div {
         .flex()
         .items_center()
         .justify_center()
-        .bg(rgb(0xf5f5f1))
+        .bg(rgb(theme::CANVAS))
         .child(
             div()
                 .w(px(420.0))
                 .p_8()
-                .rounded_lg()
-                .border_1()
-                .border_color(rgb(0xe1e1dc))
-                .bg(rgb(0xffffff))
+                .flex()
+                .flex_col()
+                .items_center()
+                .rounded_xl()
+                .bg(rgb(theme::PAPER))
+                .shadow_md()
                 .text_center()
+                .child(
+                    div()
+                        .mb_4()
+                        .size_10()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .rounded_lg()
+                        .bg(rgb(theme::ACCENT))
+                        .font_weight(FontWeight::BOLD)
+                        .text_color(rgb(theme::CHROME_TEXT))
+                        .child("H"),
+                )
                 .child(
                     div()
                         .mb_2()
                         .text_lg()
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(rgb(0x27272b))
+                        .text_color(rgb(theme::TEXT))
                         .child(props.title),
                 )
-                .child(div().text_sm().text_color(rgb(0x6f6f77)).child(props.body)),
+                .child(
+                    div()
+                        .text_sm()
+                        .text_color(rgb(theme::TEXT_MUTED))
+                        .child(props.body),
+                ),
         )
 }
