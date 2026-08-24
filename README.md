@@ -254,6 +254,23 @@ hblank dev [--project PATH] [--fixture PATH]
     Discover examples, optionally select a fixture path, launch the GPUI harness, and watch for changes.
 ```
 
+## Releases
+
+Pushes to main run semantic-release. Conventional commits determine the next lockstep version for hblank-macros, hblank, and hblank-cli:
+
+- fix commits publish a patch release;
+- feat commits publish a minor release;
+- BREAKING CHANGE footers or commits marked with ! publish a major release;
+- docs, test, and chore commits do not publish.
+
+The workflow updates the workspace and internal dependency versions, updates Cargo.lock and CHANGELOG.md, commits and tags the release, publishes the three crates in dependency order, waits for crates.io indexing between them, and creates the GitHub release. Partial crate publication is retry-safe.
+
+Run the one-time setup wizard to bootstrap the unpublished crate names and replace the temporary crates.io token with GitHub OIDC Trusted Publishing:
+
+    scripts/setup-release.sh
+
+After setup, releases require no crates.io secret in GitHub.
+
 ## Project status
 
 Hblank is pre-1.0 and currently targets GPUI `0.2.2`. The core workflow is implemented and dogfooded: initialization, glob discovery, typed controls, Rustdoc extraction, GPUI navigation, and supervised hot reload.
