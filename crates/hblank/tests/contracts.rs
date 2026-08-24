@@ -1,7 +1,7 @@
 use hblank::gpui::{App, IntoElement, ParentElement, Window, div};
 use hblank::{
-    ControlError, ControlKind, ControlValue, HblankControlAdapter, HblankEnum, HblankProps,
-    NumberConstraints, TextMode, component, fixture, registered_catalog,
+    ControlError, ControlKind, ControlValue, DocBlock, DocPage, HblankControlAdapter, HblankEnum,
+    HblankProps, NumberConstraints, TextMode, component, fixture, registered_catalog,
 };
 
 #[derive(Clone, Default, HblankEnum)]
@@ -48,7 +48,7 @@ struct DemoProps {
     internal_path: std::path::PathBuf,
 }
 
-#[component(title = "Demo", group = "Tests")]
+#[component(title = "Demo", group = "Tests", docs = demo_docs)]
 /// A presentational component used to verify generated documentation.
 fn demo(props: &DemoProps, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
     let _ = &props.internal_path;
@@ -67,6 +67,16 @@ fn demo_alternate() -> DemoProps {
         count: 2,
         ..DemoProps::default()
     }
+}
+
+fn demo_docs() -> DocPage {
+    DocPage::new([
+        DocBlock::heading(1, "Demo"),
+        DocBlock::fixture(hblank::fixture_ref!(demo_default)),
+        DocBlock::props(),
+        DocBlock::controls(),
+        DocBlock::source(),
+    ])
 }
 
 #[test]
@@ -249,6 +259,13 @@ fn captures_fixture_rustdoc_and_source_metadata() {
     assert_eq!(
         component.metadata().docs,
         "A presentational component used to verify generated documentation."
+    );
+    assert_eq!(component.docs().blocks().len(), 5);
+    assert_eq!(
+        component.docs().blocks()[1],
+        DocBlock::Fixture {
+            id: fixture.metadata().id.clone()
+        }
     );
     assert_eq!(fixture.metadata().title, "Default");
     assert_eq!(fixture.metadata().component_id, component.metadata().id);

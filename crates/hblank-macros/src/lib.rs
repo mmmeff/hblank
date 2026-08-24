@@ -157,6 +157,7 @@ fn expand_hblank_enum(input: DeriveInput) -> syn::Result<proc_macro2::TokenStrea
 struct ComponentArgs {
     title: Option<LitStr>,
     group: Option<LitStr>,
+    docs: Option<Path>,
 }
 
 #[proc_macro_attribute]
@@ -167,8 +168,10 @@ pub fn component(args: TokenStream, input: TokenStream) -> TokenStream {
             component_args.title = Some(meta.value()?.parse()?);
         } else if meta.path.is_ident("group") {
             component_args.group = Some(meta.value()?.parse()?);
+        } else if meta.path.is_ident("docs") {
+            component_args.docs = Some(meta.value()?.parse()?);
         } else {
-            return Err(meta.error("expected one of: title, group"));
+            return Err(meta.error("expected one of: title, group, docs"));
         }
         Ok(())
     });
@@ -194,6 +197,9 @@ fn expand_component(
     let group = args
         .group
         .map_or_else(|| quote!(module_path!()), |group| quote!(#group));
+    let doc_page = args
+        .docs
+        .map_or_else(|| quote!(), |docs| quote!(.with_docs(#docs())));
 
     Ok(quote! {
         #function
@@ -234,6 +240,7 @@ fn expand_component(
                     },
                     render,
                 )
+                #doc_page
             }
         }
 
@@ -276,6 +283,15 @@ struct FixtureArgs {
     title: Option<LitStr>,
 }
 
+#[proc_macro]
+pub fn fixture_ref(input: TokenStream) -> TokenStream {
+    let fixture = parse_macro_input!(input as Path);
+    match fixture_module_path(&fixture) {
+        Ok(module) => quote!(#module::id()).into(),
+        Err(error) => error.into_compile_error().into(),
+    }
+}
+
 #[proc_macro_attribute]
 pub fn fixture(args: TokenStream, input: TokenStream) -> TokenStream {
     let mut fixture_args = FixtureArgs::default();
@@ -312,7 +328,7 @@ fn expand_fixture(args: FixtureArgs, function: &ItemFn) -> syn::Result<proc_macr
     })?;
     let component_module = component_module_path(&component)?;
     let function_name = &function.sig.ident;
-    let builder_name = format_ident!("__hblank_build_{}", function_name);
+    let module_name = format_ident!("__hblank_fixture_{}", function_name);
     let function_docs = docs(&function.attrs);
     let title = args.title.unwrap_or_else(|| {
         LitStr::new(&humanize(&function_name.to_string()), function_name.span())
@@ -322,24 +338,32 @@ fn expand_fixture(args: FixtureArgs, function: &ItemFn) -> syn::Result<proc_macr
         #function
 
         #[doc(hidden)]
-        fn #builder_name() -> ::hblank::FixtureRegistrationData {
-            let defaults = #function_name();
-            #component_module::assert_props(&defaults);
-            ::hblank::FixtureRegistrationData::new(
-                ::hblank::FixtureRegistrationMetadata {
-                    id: ::hblank::canonical_source_id(file!(), stringify!(#function_name)),
-                    title: #title,
-                    docs: #function_docs,
-                    source: file!(),
-                    line: line!(),
-                },
-                #component_module::id(),
-                ::std::boxed::Box::new(defaults),
-            )
+        pub(crate) mod #module_name {
+            use super::*;
+
+            pub(crate) fn id() -> ::std::string::String {
+                ::hblank::canonical_source_id(file!(), stringify!(#function_name))
+            }
+
+            pub(crate) fn build() -> ::hblank::FixtureRegistrationData {
+                let defaults = super::#function_name();
+                #component_module::assert_props(&defaults);
+                ::hblank::FixtureRegistrationData::new(
+                    ::hblank::FixtureRegistrationMetadata {
+                        id: id(),
+                        title: #title,
+                        docs: #function_docs,
+                        source: file!(),
+                        line: line!(),
+                    },
+                    #component_module::id(),
+                    ::std::boxed::Box::new(defaults),
+                )
+            }
         }
 
         ::hblank::__private::inventory::submit! {
-            ::hblank::FixtureRegistration { build: #builder_name }
+            ::hblank::FixtureRegistration { build: #module_name::build }
         }
     })
 }
@@ -391,6 +415,15 @@ fn render_props_type<'a>(function: &'a ItemFn, subject: &str) -> syn::Result<&'a
         ));
     }
     Ok(props_reference.elem.as_ref())
+}
+
+fn fixture_module_path(fixture: &Path) -> syn::Result<Path> {
+    let mut module = fixture.clone();
+    let Some(last) = module.segments.last_mut() else {
+        return Err(Error::new_spanned(fixture, "fixture path cannot be empty"));
+    };
+    last.ident = format_ident!("__hblank_fixture_{}", last.ident);
+    Ok(module)
 }
 
 fn component_module_path(component: &Path) -> syn::Result<Path> {

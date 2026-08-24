@@ -161,10 +161,15 @@ pub fn badge(props: &BadgeProps, _window: &mut Window, _cx: &mut App) -> Div {
 The default pattern is `src/**/*.hblank.rs`. Create `src/badge.hblank.rs`:
 
 ```rust
+use hblank::{CalloutTone, DocBlock, DocPage};
 use hblank::gpui::{App, IntoElement, Window};
 use hblank_project::{BadgeProps, badge};
 
-#[hblank::component(title = "Badge", group = "Components")]
+#[hblank::component(
+    title = "Badge",
+    group = "Components",
+    docs = badge_docs
+)]
 /// A compact status badge. This Rustdoc appears automatically in the Docs panel.
 fn badge_fixture(
     props: &BadgeProps,
@@ -186,9 +191,25 @@ fn badge_warning() -> BadgeProps {
         ..BadgeProps::default()
     }
 }
+
+fn badge_docs() -> DocPage {
+    DocPage::new([
+        DocBlock::heading(1, "Badge"),
+        DocBlock::prose("Compact semantic status for dense interfaces."),
+        DocBlock::fixture(hblank::fixture_ref!(badge_warning)),
+        DocBlock::props(),
+        DocBlock::controls(),
+        DocBlock::callout(
+            CalloutTone::Note,
+            "Usage",
+            "Use warning tone only when the user can take action.",
+        ),
+        DocBlock::source(),
+    ])
+}
 ```
 
-One component owns one props schema and renderer. Fixture factories provide named default states. The sidebar groups components first and nests their variants; selecting a component opens its first visible variant. Component Rustdoc is the generated catalog description, while optional fixture Rustdoc adds variant-specific notes.
+One component owns one props schema, renderer, and optional typed `DocPage`. `DocBlock` values compose headings, prose, live fixture canvases, generated props, interactive controls, callouts, and source context without a second markup language. Fixture factories provide named default states. The sidebar groups components first and nests their variants; selecting a component opens its first visible variant. Component Rustdoc is the generated catalog description, while optional fixture Rustdoc adds variant-specific notes.
 
 Save the file while `hblank dev` is running. The harness discovers it, rebuilds the private preview crate, and adds **Badge** to navigation without restarting the command.
 
@@ -313,6 +334,7 @@ After setup, releases require no crates.io secret in GitHub.
 ## Project status
 
 Hblank is pre-1.0 and currently targets GPUI `0.2.2`. The core workflow is implemented and dogfooded: initialization, glob discovery, typed controls, Rustdoc extraction, GPUI navigation, and supervised hot reload.
+
 
 
 

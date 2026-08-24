@@ -18,14 +18,15 @@ use crate::gpui::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ComponentDefinition, ControlKind, ControlValue, FixtureDefinition, ResolvedTheme, TextMode,
-    ThemeHook, ThemeMode, registered_catalog, registered_theme_hook, render_fixture,
+    ComponentDefinition, ControlKind, ControlValue, DocBlock, FixtureDefinition, ResolvedTheme,
+    TextMode, ThemeHook, ThemeMode, registered_catalog, registered_theme_hook, render_fixture,
 };
 
 use super::components::{
     CanvasProps, ControlAction, ControlsPanelProps, DocsPanelProps, EmptyStateProps, HeaderProps,
     InspectorTab, NavigationAction, NavigationComponent, NavigationProps, NavigationVariant,
     SearchAction, SearchProps, ToolbarAction, ToolbarProps, UiHandler, canvas, controls_panel,
+    doc_callout, doc_controls, doc_fixture, doc_heading, doc_props, doc_prose, doc_source,
     docs_panel, empty_state, header, navigation, search, theme, toolbar,
 };
 
@@ -560,6 +561,106 @@ impl HarnessApp {
         }
         let _ = fs::write(&self.state_path, source);
     }
+    fn render_doc_blocks(
+        &self,
+        component: &ComponentDefinition,
+        fixture_index: usize,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+        control_handler: &UiHandler<ControlAction>,
+    ) -> Vec<gpui::AnyElement> {
+        if component.docs().is_empty() {
+            let mut blocks = Vec::with_capacity(4);
+            if !component.metadata().docs.is_empty() {
+                blocks.push(doc_prose(component.metadata().docs));
+            }
+            blocks.push(doc_props(
+                self.fixtures[fixture_index].props().definitions(),
+            ));
+            blocks.push(self.render_doc_controls(fixture_index, control_handler));
+            blocks.push(doc_source(source_label(
+                component.metadata().source,
+                component.metadata().line,
+            )));
+            return blocks;
+        }
+
+        component
+            .docs()
+            .blocks()
+            .iter()
+            .map(|block| self.render_doc_block(block, fixture_index, window, cx, control_handler))
+            .collect()
+    }
+
+    fn render_doc_block(
+        &self,
+        block: &DocBlock,
+        fixture_index: usize,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+        control_handler: &UiHandler<ControlAction>,
+    ) -> gpui::AnyElement {
+        match block {
+            DocBlock::Heading { level, text } => doc_heading(*level, text.clone()),
+            DocBlock::Prose(text) => doc_prose(text.clone()),
+            DocBlock::Fixture { id } => self
+                .fixtures
+                .iter()
+                .find(|fixture| fixture.metadata().id == *id)
+                .map_or_else(
+                    || {
+                        doc_callout(
+                            crate::CalloutTone::Warning,
+                            "Missing fixture",
+                            format!("No registered fixture matches {id}"),
+                        )
+                    },
+                    |fixture| {
+                        doc_fixture(
+                            format!(
+                                "{} · {}",
+                                fixture.metadata().component_title,
+                                fixture.metadata().title
+                            ),
+                            render_fixture(fixture, window, cx),
+                        )
+                    },
+                ),
+            DocBlock::Props => doc_props(self.fixtures[fixture_index].props().definitions()),
+            DocBlock::Controls => self.render_doc_controls(fixture_index, control_handler),
+            DocBlock::Source => doc_source(source_label(
+                self.fixtures[fixture_index].metadata().source,
+                self.fixtures[fixture_index].metadata().line,
+            )),
+            DocBlock::Callout { tone, title, body } => {
+                doc_callout(*tone, title.clone(), body.clone())
+            }
+        }
+    }
+
+    fn render_doc_controls(
+        &self,
+        fixture_index: usize,
+        handler: &UiHandler<ControlAction>,
+    ) -> gpui::AnyElement {
+        doc_controls(
+            ControlsPanelProps {
+                definitions: self.fixtures[fixture_index].props().definitions(),
+                props: self.fixtures[fixture_index].props(),
+                editing_text: match self.editing {
+                    EditingTarget::TextControl(id) => Some(id),
+                    EditingTarget::Search | EditingTarget::NumberControl(_) => None,
+                },
+                editing_number: match self.editing {
+                    EditingTarget::NumberControl(id) => Some((id, self.number_draft.as_str())),
+                    EditingTarget::Search | EditingTarget::TextControl(_) => None,
+                },
+            },
+            handler,
+        )
+    }
+
     fn render_body(
         &mut self,
         window: &mut Window,
@@ -588,18 +689,6 @@ impl HarnessApp {
         } else {
             format!("{} · {}", component_metadata.title, metadata.title)
         };
-        let docs = if metadata.docs.is_empty() {
-            component_metadata.docs.to_owned()
-        } else if component_metadata.docs.is_empty() {
-            metadata.docs.to_owned()
-        } else {
-            format!(
-                "{}
-
-{}",
-                component_metadata.docs, metadata.docs
-            )
-        };
         let toolbar_surface = toolbar(
             ToolbarProps {
                 title: title.into(),
@@ -626,12 +715,14 @@ impl HarnessApp {
                 control_handler,
             )
             .into_any_element(),
-            InspectorTab::Docs => docs_panel(DocsPanelProps {
-                title: component_metadata.title.into(),
-                docs: docs.into(),
-                source: source_label(component_metadata.source, component_metadata.line),
-            })
-            .into_any_element(),
+            InspectorTab::Docs => {
+                let blocks = self.render_doc_blocks(component, index, window, cx, &control_handler);
+                docs_panel(DocsPanelProps {
+                    title: component_metadata.title.into(),
+                    blocks,
+                })
+                .into_any_element()
+            }
         };
         div()
             .flex_1()

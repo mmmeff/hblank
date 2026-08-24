@@ -82,7 +82,7 @@ Supported automatic controls:
 
 Use `#[hblank(skip)]` for props fields that must not become controls. For a project domain newtype that maps cleanly to a built-in bool, string, number, or enum carrier, implement `HblankControlAdapter<T>` and annotate the field with `#[hblank(adapter = AdapterType)]`; do not duplicate the domain as fixture-only primitive state. Put user-facing explanations in field doc comments. For unsupported stateful/resource fields, use `skip` or a focused fixture props type. Do not weaken the production model for the harness.
 
-Read [references/component-fixtures.md](references/component-fixtures.md) before creating a new component or fixture.
+Read [references/component-fixtures.md](references/component-fixtures.md) before creating a new component, fixture, or typed `DocPage`. Prefer generated Rustdoc/props/controls/source blocks; author a page only when block ordering, embedded variants, or callouts materially improve the catalog.
 
 **Complete when:** changing each derived value produces a valid production component render without hidden state.
 
@@ -182,5 +182,6 @@ Also run the narrow command that builds the changed preview and exercise the fix
 - Read [references/framework.md](references/framework.md) when changing configuration, discovery, macros, registration, preview startup, or hot reload.
 - Read [references/component-fixtures.md](references/component-fixtures.md) when creating props, enums, components, fixture adapters, or fixture functions.
 - Read [references/troubleshooting.md](references/troubleshooting.md) when discovery, compilation, controls, docs, direct fixture launch, or reload fails.
+
 
 

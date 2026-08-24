@@ -19,12 +19,12 @@ pub use gpui_crates_io as gpui;
 pub use gpui_zed as gpui;
 pub use harness::run_harness;
 pub use hblank_core::{
-    ComponentMetadata, ControlDefinition, ControlError, ControlKind, ControlValue, FixtureMetadata,
-    FixtureRegistrationData, FixtureRegistrationMetadata, HblankControlAdapter, HblankEnum,
-    HblankProps, NumberConstraints, RegistryError, ResolvedTheme, TextMode, ThemeMode,
-    canonical_source_id,
+    CalloutTone, ComponentMetadata, ControlDefinition, ControlError, ControlKind, ControlValue,
+    DocBlock, DocPage, FixtureMetadata, FixtureRegistrationData, FixtureRegistrationMetadata,
+    HblankControlAdapter, HblankEnum, HblankProps, NumberConstraints, RegistryError, ResolvedTheme,
+    TextMode, ThemeMode, canonical_source_id,
 };
-pub use hblank_macros::{HblankEnum, HblankProps, component, fixture, theme_hook};
+pub use hblank_macros::{HblankEnum, HblankProps, component, fixture, fixture_ref, theme_hook};
 pub use theme::{ThemeHook, ThemeHookRegistration, registered_theme_hook};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

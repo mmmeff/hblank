@@ -8,8 +8,8 @@ use crate::gpui::{
 };
 
 use crate::{
-    ControlDefinition, ControlKind, ControlValue, HblankProps, NumberConstraints, TextMode,
-    ThemeMode,
+    CalloutTone, ControlDefinition, ControlKind, ControlValue, HblankProps, NumberConstraints,
+    TextMode, ThemeMode,
 };
 
 pub(super) mod theme {
@@ -1270,18 +1270,15 @@ fn format_number(value: f64) -> String {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DocsPanelProps {
     pub title: SharedString,
-    pub docs: SharedString,
-    pub source: SharedString,
+    pub blocks: Vec<AnyElement>,
 }
 
 #[must_use]
 pub fn docs_panel(props: DocsPanelProps) -> Div {
-    let has_docs = !props.docs.is_empty();
     div()
-        .w(rems(20.0))
+        .w(rems(28.0))
         .h_full()
         .flex_none()
         .flex()
@@ -1301,7 +1298,7 @@ pub fn docs_panel(props: DocsPanelProps) -> Div {
                 .text_xs()
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_color(rgb(theme::text()))
-                .child("DOCUMENTATION"),
+                .child("COMPONENT DOCUMENTATION"),
         )
         .child(
             div()
@@ -1310,39 +1307,191 @@ pub fn docs_panel(props: DocsPanelProps) -> Div {
                 .min_h_0()
                 .overflow_scroll()
                 .p_5()
+                .flex()
+                .flex_col()
+                .gap_4()
                 .child(
                     div()
-                        .mb_3()
-                        .text_lg()
+                        .mb_1()
+                        .text_xl()
                         .font_weight(FontWeight::SEMIBOLD)
                         .text_color(rgb(theme::text()))
                         .child(props.title),
                 )
-                .child(
-                    div()
-                        .mb_5()
-                        .text_sm()
-                        .text_color(if has_docs {
-                            rgb(theme::text_muted())
-                        } else {
-                            rgb(theme::text_subtle())
-                        })
-                        .child(if has_docs {
-                            props.docs
-                        } else {
-                            SharedString::from("Add Rust doc comments above the #[hblank::fixture] function to document this fixture.")
-                        }),
-                )
-                .child(
-                    div()
-                        .p_3()
-                        .rounded_lg()
-                        .bg(rgb(theme::surface_subtle()))
-                        .text_xs()
-                        .text_color(rgb(theme::text_subtle()))
-                        .child(props.source),
-                ),
+                .children(props.blocks),
         )
+}
+
+#[must_use]
+pub fn doc_heading(level: u8, text: impl Into<SharedString>) -> AnyElement {
+    let heading = div()
+        .font_weight(FontWeight::SEMIBOLD)
+        .text_color(rgb(theme::text()))
+        .child(text.into());
+    match level {
+        1 => heading.text_xl(),
+        2 => heading.text_lg(),
+        _ => heading.text_sm(),
+    }
+    .into_any_element()
+}
+
+#[must_use]
+pub fn doc_prose(text: impl Into<SharedString>) -> AnyElement {
+    div()
+        .text_sm()
+        .text_color(rgb(theme::text_muted()))
+        .child(text.into())
+        .into_any_element()
+}
+
+#[must_use]
+pub fn doc_callout(
+    tone: CalloutTone,
+    title: impl Into<SharedString>,
+    body: impl Into<SharedString>,
+) -> AnyElement {
+    let (border, background) = match tone {
+        CalloutTone::Note => (theme::accent(), theme::accent_wash()),
+        CalloutTone::Success => (theme::success(), theme::surface_subtle()),
+        CalloutTone::Warning => (theme::error(), theme::surface_subtle()),
+    };
+    div()
+        .p_4()
+        .rounded_lg()
+        .border_1()
+        .border_color(rgb(border))
+        .bg(rgb(background))
+        .child(
+            div()
+                .mb_2()
+                .text_sm()
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_color(rgb(theme::text()))
+                .child(title.into()),
+        )
+        .child(
+            div()
+                .text_xs()
+                .text_color(rgb(theme::text_muted()))
+                .child(body.into()),
+        )
+        .into_any_element()
+}
+
+#[must_use]
+pub fn doc_fixture(label: impl Into<SharedString>, preview: AnyElement) -> AnyElement {
+    div()
+        .rounded_lg()
+        .border_1()
+        .border_color(rgb(theme::line()))
+        .bg(rgb(theme::canvas()))
+        .child(
+            div()
+                .px_3()
+                .py_2()
+                .border_b_1()
+                .border_color(rgb(theme::line()))
+                .text_xs()
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_color(rgb(theme::text_subtle()))
+                .child(label.into()),
+        )
+        .child(
+            div()
+                .min_h(rems(8.0))
+                .p_4()
+                .flex()
+                .items_center()
+                .justify_center()
+                .child(preview),
+        )
+        .into_any_element()
+}
+
+#[must_use]
+pub fn doc_props(definitions: &'static [ControlDefinition]) -> AnyElement {
+    let rows = definitions.iter().map(|definition| {
+        div()
+            .py_2()
+            .border_b_1()
+            .border_color(rgb(theme::line()))
+            .child(
+                div()
+                    .flex()
+                    .justify_between()
+                    .child(
+                        div()
+                            .text_sm()
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .text_color(rgb(theme::text()))
+                            .child(definition.label),
+                    )
+                    .child(
+                        div()
+                            .text_xs()
+                            .text_color(rgb(theme::text_subtle()))
+                            .child(definition.kind.name()),
+                    ),
+            )
+            .when(!definition.docs.is_empty(), |this| {
+                this.child(
+                    div()
+                        .mt_1()
+                        .text_xs()
+                        .text_color(rgb(theme::text_muted()))
+                        .child(definition.docs),
+                )
+            })
+    });
+    div()
+        .child(doc_heading(2, "Properties"))
+        .children(rows)
+        .into_any_element()
+}
+
+#[must_use]
+pub fn doc_controls(
+    props: ControlsPanelProps<'_>,
+    on_action: &UiHandler<ControlAction>,
+) -> AnyElement {
+    let rows = props
+        .definitions
+        .iter()
+        .enumerate()
+        .map(|(index, definition)| {
+            let value = props.props.control_value(definition.id);
+            let number_draft = props
+                .editing_number
+                .and_then(|(id, draft)| (id == definition.id).then_some(draft));
+            control_row(
+                index,
+                definition,
+                value,
+                props.editing_text == Some(definition.id),
+                number_draft,
+                on_action.clone(),
+            )
+        });
+    div()
+        .child(doc_heading(2, "Live controls"))
+        .rounded_lg()
+        .border_1()
+        .border_color(rgb(theme::line()))
+        .children(rows)
+        .into_any_element()
+}
+
+#[must_use]
+pub fn doc_source(source: impl Into<SharedString>) -> AnyElement {
+    div()
+        .p_3()
+        .rounded_lg()
+        .bg(rgb(theme::surface_subtle()))
+        .text_xs()
+        .text_color(rgb(theme::text_subtle()))
+        .child(source.into())
+        .into_any_element()
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

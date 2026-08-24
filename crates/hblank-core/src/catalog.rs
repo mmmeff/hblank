@@ -7,7 +7,7 @@ use std::{
 
 use thiserror::Error;
 
-use crate::{ControlError, ControlValue, HblankProps};
+use crate::{ControlError, ControlValue, DocPage, HblankProps};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ComponentMetadata {
@@ -23,6 +23,7 @@ pub struct ComponentDefinition<Renderer> {
     metadata: ComponentMetadata,
     props_type: TypeId,
     renderer: Renderer,
+    docs: DocPage,
 }
 
 impl<Renderer> ComponentDefinition<Renderer> {
@@ -32,6 +33,7 @@ impl<Renderer> ComponentDefinition<Renderer> {
             metadata,
             props_type: TypeId::of::<Props>(),
             renderer,
+            docs: DocPage::default(),
         }
     }
 
@@ -43,6 +45,17 @@ impl<Renderer> ComponentDefinition<Renderer> {
     #[must_use]
     pub const fn renderer(&self) -> &Renderer {
         &self.renderer
+    }
+
+    #[must_use]
+    pub fn with_docs(mut self, docs: DocPage) -> Self {
+        self.docs = docs;
+        self
+    }
+
+    #[must_use]
+    pub const fn docs(&self) -> &DocPage {
+        &self.docs
     }
 }
 

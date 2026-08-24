@@ -66,6 +66,12 @@ The runtime joins components and variants, rejects duplicate canonical ids, unkn
 
 `HblankControlAdapter<T>` maps a project domain type onto a built-in carrier type. `#[hblank(adapter = AdapterType)]` makes the derive call that adapter while preserving Hblank-owned metadata validation and editor behavior; adapters do not provide arbitrary control rendering.
 
+## Documentation pages
+
+`ComponentDefinition` owns a framework-neutral `DocPage`. The optional `docs = path` component attribute calls a typed Rust builder; `DocBlock` supports heading, prose, fixture, props, controls, callout, and source blocks in declared order. `fixture_ref!` rewrites a fixture function path to its generated canonical-id helper at compile time.
+
+The GPUI adapter renders fixture blocks as live canvases, props as generated metadata, and controls through the same mutation handlers as the inspector. Components without an authored page receive generated Rustdoc, props, controls, and source blocks.
+
 ## Themes
 
 The harness owns a three-state `ThemeMode`: System, Light, and Dark. System resolves from GPUI `WindowAppearance` and observes changes; an override lasts only for the current supervised dev session. Dynamic chrome colors come from Hblank's light/dark palettes.
@@ -92,5 +98,6 @@ On relevant content change:
 6. stop the old preview after replacement is ready.
 
 A failed build leaves the old preview alive. Hblank deliberately avoids unstable Rust dynamic-library ABIs.
+
 
 

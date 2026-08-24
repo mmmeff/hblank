@@ -6,7 +6,7 @@ use hblank::gpui::{App, IntoElement, Window, div, prelude::*, px, rgb};
 use hblank::harness::{
     CanvasProps, ControlsPanelProps, DocsPanelProps, EmptyStateProps, HeaderProps, InspectorTab,
     NavigationComponent, NavigationProps, NavigationVariant, SearchProps, ToolbarProps, UiHandler, canvas, controls_panel,
-    docs_panel, empty_state, header, navigation, search, toolbar,
+    doc_prose, doc_source, docs_panel, empty_state, header, navigation, search, toolbar,
 };
 use hblank::{HblankEnum, HblankProps, ThemeMode};
 
@@ -328,8 +328,10 @@ impl Default for DocsFixtureProps {
 fn docs_fixture(props: &DocsFixtureProps, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
     docs_panel(DocsPanelProps {
         title: props.title.clone().into(),
-        docs: props.docs.clone().into(),
-        source: "src/fixture_card.hblank.rs:8".into(),
+        blocks: vec![
+            doc_prose(props.docs.clone()),
+            doc_source("src/fixture_card.hblank.rs:8"),
+        ],
     })
 }
 
@@ -373,5 +375,6 @@ fn empty_state_fixture(
 fn empty_state_default() -> EmptyFixtureProps {
     EmptyFixtureProps::default()
 }
+
 
 

@@ -176,6 +176,34 @@ struct ProgressProps {
 
 Adapters convert values only. They do not render custom GPUI editors or bypass the built-in control validation contract.
 
+## Typed component documentation
+
+Attach a Rust function returning `DocPage` through the component attribute:
+
+```rust
+#[hblank::component(title = "Badge", group = "Components", docs = badge_docs)]
+fn badge_component(
+    props: &BadgeProps,
+    window: &mut Window,
+    cx: &mut App,
+) -> impl IntoElement {
+    badge(props, window, cx)
+}
+
+fn badge_docs() -> hblank::DocPage {
+    hblank::DocPage::new([
+        hblank::DocBlock::heading(1, "Badge"),
+        hblank::DocBlock::prose("Compact semantic status."),
+        hblank::DocBlock::fixture(hblank::fixture_ref!(badge_default)),
+        hblank::DocBlock::props(),
+        hblank::DocBlock::controls(),
+        hblank::DocBlock::source(),
+    ])
+}
+```
+
+`fixture_ref!` resolves through the generated fixture registration, so a renamed fixture fails at compile time instead of leaving a stale string. Components without a custom page receive generated Rustdoc, props, live controls, and source blocks.
+
 ## Multiple variants in one file
 
 Register one `#[hblank::component]` renderer, then add any number of zero-argument `#[hblank::fixture(component = renderer, title = "…")]` factories returning the same props type. Canonical component and fixture ids derive from source path plus function symbol. The harness groups by component and nests variants in title/id order; source-path launch selects the first variant in that hierarchy.
@@ -187,5 +215,6 @@ Register one `#[hblank::component]` renderer, then add any number of zero-argume
 - Props field doc comments explain controls.
 - Production component docs remain on the production function/type.
 - Do not duplicate long prose in Hblank-specific files when the production docs already answer the user’s question; fixture docs should explain the showcased state.
+
 
 
