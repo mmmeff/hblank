@@ -2372,11 +2372,18 @@ name = "hblank"
 version = "0.2.0"
 dependencies = [
  "gpui",
+ "hblank-core",
  "hblank-macros",
  "inventory",
  "serde",
- "thiserror 2.0.20",
  "toml 0.9.12+spec-1.1.0",
+]
+
+[[package]]
+name = "hblank-core"
+version = "0.2.0"
+dependencies = [
+ "thiserror 2.0.20",
 ]
 
 [[package]]

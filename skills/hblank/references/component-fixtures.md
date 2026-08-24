@@ -20,8 +20,10 @@ pub struct BadgeProps {
     /// Enables the emphasized visual treatment.
     pub emphasized: bool,
     /// Text displayed in the badge.
+    #[hblank(multiline)]
     pub label: String,
     /// Number displayed beside the label.
+    #[hblank(min = 0, max = 10, step = 1)]
     pub count: u32,
     /// Semantic color treatment.
     pub tone: Tone,

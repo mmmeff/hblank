@@ -1,7 +1,7 @@
 use hblank::gpui::{App, IntoElement, ParentElement, Window, div};
 use hblank::{
-    ControlError, ControlKind, ControlValue, HblankEnum, HblankProps, component, fixture,
-    registered_catalog,
+    ControlError, ControlKind, ControlValue, HblankEnum, HblankProps, NumberConstraints, TextMode,
+    component, fixture, registered_catalog,
 };
 
 #[derive(Clone, Default, HblankEnum)]
@@ -17,16 +17,21 @@ struct DemoProps {
     /// Whether the component is emphasized.
     emphasized: bool,
     /// Text displayed in the component.
+    #[hblank(multiline)]
     label: String,
     /// Number of visible markers.
+    #[hblank(min = 0, max = 10, step = 2)]
     count: u32,
     /// Color treatment used by the component.
     tone: Tone,
+    #[hblank(skip)]
+    internal_path: std::path::PathBuf,
 }
 
 #[component(title = "Demo", group = "Tests")]
 /// A presentational component used to verify generated documentation.
 fn demo(props: &DemoProps, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+    let _ = &props.internal_path;
     div().child(props.label.clone())
 }
 
@@ -54,8 +59,22 @@ fn derives_control_metadata_and_values() {
     assert_eq!(definitions[0].label, "Emphasized");
     assert_eq!(definitions[0].docs, "Whether the component is emphasized.");
     assert_eq!(definitions[0].kind, ControlKind::Boolean);
-    assert_eq!(definitions[1].kind, ControlKind::Text);
-    assert_eq!(definitions[2].kind, ControlKind::Number);
+    assert_eq!(
+        definitions[1].kind,
+        ControlKind::Text {
+            mode: TextMode::Multiline
+        }
+    );
+    assert_eq!(
+        definitions[2].kind,
+        ControlKind::Number {
+            constraints: NumberConstraints {
+                min: Some(0.0),
+                max: Some(10.0),
+                step: 2.0,
+            }
+        }
+    );
     assert_eq!(
         definitions[3].kind,
         ControlKind::Enum {
@@ -85,8 +104,8 @@ fn mutates_every_supported_control_type_and_resets() {
         .set_control("label", ControlValue::Text("Changed".to_owned()))
         .expect("text control should update");
     fixture
-        .set_control("count", ControlValue::Number(3.0))
-        .expect("numeric control should update");
+        .set_control("count", ControlValue::Number(4.0))
+        .expect("constrained numeric control should update");
     fixture
         .set_control("tone", ControlValue::Enum("High contrast".to_owned()))
         .expect("enum control should update");
@@ -101,7 +120,7 @@ fn mutates_every_supported_control_type_and_resets() {
     );
     assert_eq!(
         fixture.props().control_value("count"),
-        Some(ControlValue::Number(3.0))
+        Some(ControlValue::Number(4.0))
     );
     assert_eq!(
         fixture.props().control_value("tone"),
@@ -124,10 +143,27 @@ fn rejects_invalid_control_updates() {
     let mut props = DemoProps::default();
 
     assert_eq!(
-        props.set_control("count", ControlValue::Number(1.5)),
-        Err(ControlError::InvalidNumber {
+        props.set_control("count", ControlValue::Number(-2.0)),
+        Err(ControlError::BelowMinimum {
             control: "count",
-            value: 1.5,
+            min: 0.0,
+            value: -2.0,
+        })
+    );
+    assert_eq!(
+        props.set_control("count", ControlValue::Number(12.0)),
+        Err(ControlError::AboveMaximum {
+            control: "count",
+            max: 10.0,
+            value: 12.0,
+        })
+    );
+    assert_eq!(
+        props.set_control("count", ControlValue::Number(3.0)),
+        Err(ControlError::StepMismatch {
+            control: "count",
+            step: 2.0,
+            value: 3.0,
         })
     );
     assert_eq!(
@@ -138,8 +174,8 @@ fn rejects_invalid_control_updates() {
         })
     );
     assert_eq!(
-        props.set_control("missing", ControlValue::Boolean(true)),
-        Err(ControlError::UnknownControl("missing".to_owned()))
+        props.set_control("internal_path", ControlValue::Text("hidden".to_owned())),
+        Err(ControlError::UnknownControl("internal_path".to_owned()))
     );
 }
 

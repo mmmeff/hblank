@@ -19,8 +19,8 @@ pub use gpui_zed as gpui;
 pub use harness::run_harness;
 pub use hblank_core::{
     ComponentMetadata, ControlDefinition, ControlError, ControlKind, ControlValue, FixtureMetadata,
-    FixtureRegistrationData, FixtureRegistrationMetadata, HblankEnum, HblankProps, RegistryError,
-    canonical_source_id,
+    FixtureRegistrationData, FixtureRegistrationMetadata, HblankEnum, HblankProps,
+    NumberConstraints, RegistryError, TextMode, canonical_source_id,
 };
 pub use hblank_macros::{HblankEnum, HblankProps, component, fixture};
 

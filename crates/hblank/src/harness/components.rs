@@ -7,7 +7,9 @@ use crate::gpui::{
     AnyElement, App, Div, FontWeight, SharedString, Window, div, prelude::*, px, rems, rgb,
 };
 
-use crate::{ControlDefinition, ControlKind, ControlValue, HblankProps};
+use crate::{
+    ControlDefinition, ControlKind, ControlValue, HblankProps, NumberConstraints, TextMode,
+};
 
 pub(super) mod theme {
     pub const CHROME: u32 = 0x17171c;
@@ -532,6 +534,7 @@ pub struct ControlsPanelProps<'a> {
     pub definitions: &'static [ControlDefinition],
     pub props: &'a dyn HblankProps,
     pub editing_text: Option<&'static str>,
+    pub editing_number: Option<(&'static str, &'a str)>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -541,6 +544,9 @@ pub enum ControlAction {
         value: ControlValue,
     },
     EditText {
+        id: &'static str,
+    },
+    EditNumber {
         id: &'static str,
     },
     Reset,
@@ -555,11 +561,15 @@ pub fn controls_panel(props: ControlsPanelProps<'_>, on_action: UiHandler<Contro
         .enumerate()
         .map(move |(index, definition)| {
             let value = props.props.control_value(definition.id);
+            let number_draft = props
+                .editing_number
+                .and_then(|(id, draft)| (id == definition.id).then_some(draft));
             control_row(
                 index,
                 definition,
                 value,
                 props.editing_text == Some(definition.id),
+                number_draft,
                 row_handler.clone(),
             )
         });
@@ -628,10 +638,18 @@ fn control_row(
     index: usize,
     definition: &'static ControlDefinition,
     value: Option<ControlValue>,
-    editing: bool,
+    editing_text: bool,
+    number_draft: Option<&str>,
     handler: UiHandler<ControlAction>,
 ) -> AnyElement {
-    let control = control_input(index, definition, value, editing, handler);
+    let control = control_input(
+        index,
+        definition,
+        value,
+        editing_text,
+        number_draft,
+        handler,
+    );
     div()
         .px_4()
         .py_4()
@@ -674,19 +692,25 @@ fn control_input(
     index: usize,
     definition: &'static ControlDefinition,
     value: Option<ControlValue>,
-    editing: bool,
+    editing_text: bool,
+    number_draft: Option<&str>,
     handler: UiHandler<ControlAction>,
 ) -> AnyElement {
     match (definition.kind, value) {
         (ControlKind::Boolean, Some(ControlValue::Boolean(value))) => {
             boolean_control(index, definition.id, value, handler)
         }
-        (ControlKind::Text, Some(ControlValue::Text(value))) => {
-            text_control(index, definition.id, value, editing, handler)
+        (ControlKind::Text { mode }, Some(ControlValue::Text(value))) => {
+            text_control(index, definition.id, value, mode, editing_text, handler)
         }
-        (ControlKind::Number, Some(ControlValue::Number(value))) => {
-            number_control(index, definition.id, value, handler)
-        }
+        (ControlKind::Number { constraints }, Some(ControlValue::Number(value))) => number_control(
+            index,
+            definition.id,
+            value,
+            constraints,
+            number_draft,
+            handler,
+        ),
         (ControlKind::Enum { options }, Some(ControlValue::Enum(selected))) => {
             enum_control(index, definition.id, options, &selected, &handler)
         }
@@ -718,11 +742,11 @@ fn boolean_control(
         .justify_end()
         .rounded_full()
         .cursor_pointer()
-        .bg(if value {
-            rgb(theme::ACCENT)
+        .bg(rgb(if value {
+            theme::ACCENT
         } else {
-            rgb(theme::LINE_STRONG)
-        })
+            theme::LINE_STRONG
+        }))
         .when(!value, gpui::Styled::justify_start)
         .hover(move |this| {
             this.bg(rgb(if value {
@@ -747,6 +771,7 @@ fn text_control(
     index: usize,
     id: &'static str,
     value: String,
+    mode: TextMode,
     editing: bool,
     handler: UiHandler<ControlAction>,
 ) -> AnyElement {
@@ -754,25 +779,29 @@ fn text_control(
     let empty = value.is_empty();
     div()
         .id(("hblank-text", index))
-        .min_h(rems(2.25))
+        .min_h(rems(if mode == TextMode::Multiline {
+            5.0
+        } else {
+            2.25
+        }))
         .w_full()
         .flex()
         .items_center()
         .px_3()
         .rounded_md()
         .border_1()
-        .border_color(if editing {
-            rgb(theme::ACCENT)
+        .border_color(rgb(if editing {
+            theme::ACCENT
         } else {
-            rgb(theme::LINE_STRONG)
-        })
+            theme::LINE_STRONG
+        }))
         .bg(rgb(theme::PAPER))
         .text_sm()
-        .text_color(if empty {
-            rgb(theme::TEXT_SUBTLE)
+        .text_color(rgb(if empty {
+            theme::TEXT_SUBTLE
         } else {
-            rgb(theme::TEXT)
-        })
+            theme::TEXT
+        }))
         .cursor_pointer()
         .hover(move |this| {
             this.border_color(rgb(if editing {
@@ -784,7 +813,11 @@ fn text_control(
         .active(|this| this.bg(rgb(theme::SURFACE_SUBTLE)))
         .on_click(move |_, window, cx| handler(&action, window, cx))
         .child(if empty {
-            SharedString::from("Type a value…")
+            SharedString::from(if mode == TextMode::Multiline {
+                "Type multiple lines…"
+            } else {
+                "Type a value…"
+            })
         } else {
             SharedString::from(value)
         })
@@ -795,43 +828,79 @@ fn number_control(
     index: usize,
     id: &'static str,
     value: f64,
+    constraints: NumberConstraints,
+    draft: Option<&str>,
     handler: UiHandler<ControlAction>,
 ) -> AnyElement {
     let decrement = handler.clone();
-    let increment = handler;
+    let increment = handler.clone();
+    let edit = handler;
     let decrement_action = ControlAction::Set {
         id,
-        value: ControlValue::Number(value - 1.0),
+        value: ControlValue::Number(stepped_number(value, -constraints.step, constraints)),
     };
     let increment_action = ControlAction::Set {
         id,
-        value: ControlValue::Number(value + 1.0),
+        value: ControlValue::Number(stepped_number(value, constraints.step, constraints)),
     };
+    let edit_action = ControlAction::EditNumber { id };
+    let constraint_label = number_constraint_label(constraints);
+    let display = draft.map_or_else(|| format_number(value), str::to_owned);
     div()
         .flex()
-        .items_center()
+        .flex_col()
         .gap_2()
-        .child(step_button(index * 2, "−", move |window, cx| {
-            decrement(&decrement_action, window, cx);
-        }))
         .child(
             div()
-                .w(rems(4.5))
-                .h(rems(2.125))
                 .flex()
                 .items_center()
-                .justify_center()
-                .rounded_md()
-                .border_1()
-                .border_color(rgb(theme::LINE_STRONG))
-                .bg(rgb(theme::SURFACE_SUBTLE))
-                .text_sm()
-                .text_color(rgb(theme::TEXT))
-                .child(format_number(value)),
+                .gap_2()
+                .child(step_button(index * 2, "−", move |window, cx| {
+                    decrement(&decrement_action, window, cx);
+                }))
+                .child(
+                    div()
+                        .id(("hblank-number", index))
+                        .min_w(rems(5.5))
+                        .h(rems(2.125))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .px_2()
+                        .rounded_md()
+                        .border_1()
+                        .border_color(rgb(if draft.is_some() {
+                            theme::ACCENT
+                        } else {
+                            theme::LINE_STRONG
+                        }))
+                        .bg(rgb(theme::SURFACE_SUBTLE))
+                        .text_sm()
+                        .text_color(rgb(if display.is_empty() {
+                            theme::TEXT_SUBTLE
+                        } else {
+                            theme::TEXT
+                        }))
+                        .cursor_pointer()
+                        .on_click(move |_, window, cx| edit(&edit_action, window, cx))
+                        .child(if display.is_empty() {
+                            "Type a number…".to_owned()
+                        } else {
+                            display
+                        }),
+                )
+                .child(step_button(index * 2 + 1, "+", move |window, cx| {
+                    increment(&increment_action, window, cx);
+                })),
         )
-        .child(step_button(index * 2 + 1, "+", move |window, cx| {
-            increment(&increment_action, window, cx);
-        }))
+        .when(!constraint_label.is_empty(), |this| {
+            this.child(
+                div()
+                    .text_xs()
+                    .text_color(rgb(theme::TEXT_SUBTLE))
+                    .child(constraint_label),
+            )
+        })
         .into_any_element()
 }
 
@@ -842,10 +911,12 @@ fn enum_control(
     selected: &str,
     handler: &UiHandler<ControlAction>,
 ) -> AnyElement {
+    let list = options.len() > 4;
     div()
         .flex()
-        .flex_wrap()
         .gap_1()
+        .when(list, |this| this.w_full().flex_col())
+        .when(!list, gpui::Styled::flex_wrap)
         .children(options.iter().enumerate().map(|(option_index, option)| {
             let option_handler = Rc::clone(handler);
             let action = ControlAction::Set {
@@ -856,27 +927,28 @@ fn enum_control(
             div()
                 .id(("hblank-enum", index * 100 + option_index))
                 .h(rems(2.0))
+                .when(list, gpui::Styled::w_full)
                 .flex()
                 .items_center()
                 .px_3()
                 .rounded_md()
                 .border_1()
-                .border_color(if is_selected {
-                    rgb(theme::ACCENT)
+                .border_color(rgb(if is_selected {
+                    theme::ACCENT
                 } else {
-                    rgb(theme::LINE_STRONG)
-                })
-                .bg(if is_selected {
-                    rgb(theme::ACCENT)
+                    theme::LINE_STRONG
+                }))
+                .bg(rgb(if is_selected {
+                    theme::ACCENT
                 } else {
-                    rgb(theme::PAPER)
-                })
+                    theme::PAPER
+                }))
                 .text_xs()
-                .text_color(if is_selected {
-                    rgb(theme::CHROME_TEXT)
+                .text_color(rgb(if is_selected {
+                    theme::CHROME_TEXT
                 } else {
-                    rgb(theme::ACCENT_INK)
-                })
+                    theme::ACCENT_INK
+                }))
                 .when(is_selected, |this| this.font_weight(FontWeight::SEMIBOLD))
                 .cursor_pointer()
                 .hover(move |this| {
@@ -921,11 +993,34 @@ fn step_button(
         .child(label)
 }
 
+fn stepped_number(value: f64, delta: f64, constraints: NumberConstraints) -> f64 {
+    let mut next = value + delta;
+    if let Some(min) = constraints.min {
+        next = next.max(min);
+    }
+    if let Some(max) = constraints.max {
+        next = next.min(max);
+    }
+    next
+}
+
+fn number_constraint_label(constraints: NumberConstraints) -> String {
+    let mut parts = Vec::with_capacity(3);
+    if let Some(min) = constraints.min {
+        parts.push(format!("min {}", format_number(min)));
+    }
+    if let Some(max) = constraints.max {
+        parts.push(format!("max {}", format_number(max)));
+    }
+    parts.push(format!("step {}", format_number(constraints.step)));
+    parts.join(" · ")
+}
+
 fn format_number(value: f64) -> String {
     if value.fract() == 0.0 {
         format!("{value:.0}")
     } else {
-        format!("{value:.2}")
+        format!("{value:.4}").trim_end_matches('0').to_owned()
     }
 }
 

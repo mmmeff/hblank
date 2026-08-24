@@ -76,11 +76,11 @@ Supported automatic controls:
 | Rust type | Harness control |
 |---|---|
 | `bool` | toggle |
-| `String` | editable text |
-| integer or float | numeric stepper |
-| unit enum deriving `HblankEnum` | option buttons |
+| `String` | direct single-line editor; `#[hblank(multiline)]` enables multiline |
+| integer or float | direct editor and configured stepper; optional `min`, `max`, `step` |
+| unit enum deriving `HblankEnum` | chips for small enums, list for larger enums |
 
-Put user-facing explanations in field doc comments. If production props contain unsupported or stateful fields, define a fixture-only presentation props type from supported fields and map it into the production props. Do not weaken the production model for the harness.
+Use `#[hblank(skip)]` for props fields that must not become controls. Put user-facing explanations in field doc comments. If production props contain unsupported or stateful fields, define a fixture-only presentation props type from supported fields and map it into the production props. Do not weaken the production model for the harness.
 
 Read [references/component-fixtures.md](references/component-fixtures.md) before creating a new component or fixture.
 

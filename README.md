@@ -189,11 +189,11 @@ Open **Badge** and change its generated controls:
 | Rust field | Harness control |
 |---|---|
 | `bool` | Toggle |
-| `String` | Editable text |
-| Integer or float | Stepper |
-| `#[derive(HblankEnum)]` unit enum | Option buttons |
+| `String` | Direct single-line editor; `#[hblank(multiline)]` enables multiline editing |
+| Integer or float | Direct editor plus stepper; `min`, `max`, and `step` attributes enforce constraints |
+| `#[derive(HblankEnum)]` unit enum | Option chips for small enums, compact list for larger enums |
 
-Every accepted change updates the typed props and rerenders the isolated GPUI component immediately.
+Use `#[hblank(skip)]` to keep a field in the props type without generating a control. Visible controls remain in Rust field declaration order. Every accepted change updates the typed props and rerenders the isolated GPUI component immediately.
 
 ## Configure discovery
 

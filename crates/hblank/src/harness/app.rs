@@ -15,7 +15,9 @@ use crate::gpui::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{ControlValue, FixtureDefinition, registered_catalog, render_fixture};
+use crate::{
+    ControlKind, ControlValue, FixtureDefinition, TextMode, registered_catalog, render_fixture,
+};
 
 use super::components::{
     CanvasProps, ControlAction, ControlsPanelProps, DocsPanelProps, EmptyStateProps, HeaderProps,
@@ -52,6 +54,7 @@ struct PersistedState {
 enum EditingTarget {
     Search,
     TextControl(&'static str),
+    NumberControl(&'static str),
 }
 
 struct HarnessApp {
@@ -61,6 +64,7 @@ struct HarnessApp {
     filter: String,
     inspector: InspectorTab,
     editing: EditingTarget,
+    number_draft: String,
     ui_scale: f32,
     focus_handle: FocusHandle,
     project: SharedString,
@@ -148,6 +152,7 @@ impl HarnessApp {
             },
             inspector: InspectorTab::Controls,
             editing: EditingTarget::Search,
+            number_draft: String::new(),
             ui_scale: DEFAULT_UI_SCALE,
             focus_handle,
             project: env::var("HBLANK_WINDOW_TITLE")
@@ -183,6 +188,7 @@ impl HarnessApp {
         {
             self.selected = Some(index);
             self.editing = EditingTarget::Search;
+            self.number_draft.clear();
             self.status = SharedString::from("Ready");
             self.persist();
             cx.notify();
@@ -232,6 +238,7 @@ impl HarnessApp {
     #[allow(clippy::trivially_copy_pass_by_ref)]
     fn on_search_focus(&mut self, _: &SearchAction, window: &mut Window, cx: &mut Context<Self>) {
         self.editing = EditingTarget::Search;
+        self.number_draft.clear();
         focus(&self.focus_handle, window, cx);
         cx.notify();
     }
@@ -259,6 +266,13 @@ impl HarnessApp {
             }
             ControlAction::EditText { id } => {
                 self.editing = EditingTarget::TextControl(id);
+                self.number_draft.clear();
+                focus(&self.focus_handle, window, cx);
+            }
+            ControlAction::EditNumber { id } => {
+                self.editing = EditingTarget::NumberControl(id);
+                self.number_draft.clear();
+                self.status = "Type a number".into();
                 focus(&self.focus_handle, window, cx);
             }
             ControlAction::Reset => {
@@ -266,6 +280,7 @@ impl HarnessApp {
                     fixture.reset();
                 }
                 self.editing = EditingTarget::Search;
+                self.number_draft.clear();
                 self.status = SharedString::from("Ready");
             }
         }
@@ -289,17 +304,34 @@ impl HarnessApp {
         }
 
         match event.keystroke.key.as_str() {
-            "up" => {
+            "up" if self.editing == EditingTarget::Search => {
                 self.navigate_filtered(-1, cx);
                 return;
             }
-            "down" => {
+            "down" if self.editing == EditingTarget::Search => {
                 self.navigate_filtered(1, cx);
                 return;
             }
             "escape" => {
-                self.filter.clear();
+                if self.editing == EditingTarget::Search {
+                    self.filter.clear();
+                }
                 self.editing = EditingTarget::Search;
+                self.number_draft.clear();
+                self.status = "Ready".into();
+                self.persist();
+                cx.notify();
+                return;
+            }
+            "enter" => {
+                if let EditingTarget::TextControl(id) = self.editing
+                    && self.text_is_multiline(id)
+                {
+                    self.insert_text("\n");
+                } else {
+                    self.editing = EditingTarget::Search;
+                    self.number_draft.clear();
+                }
                 self.persist();
                 cx.notify();
                 return;
@@ -313,12 +345,12 @@ impl HarnessApp {
             _ => {}
         }
 
-        if let Some(text) = event.keystroke.key_char.as_deref() {
-            if !text.chars().any(char::is_control) {
-                self.insert_text(text);
-                self.persist();
-                cx.notify();
-            }
+        if let Some(text) = event.keystroke.key_char.as_deref()
+            && !text.chars().any(char::is_control)
+        {
+            self.insert_text(text);
+            self.persist();
+            cx.notify();
         }
     }
 
@@ -337,6 +369,10 @@ impl HarnessApp {
                 value.pop();
                 let _ = fixture.set_control(id, ControlValue::Text(value));
             }
+            EditingTarget::NumberControl(id) => {
+                self.number_draft.pop();
+                self.apply_number_draft(id);
+            }
         }
     }
 
@@ -353,7 +389,45 @@ impl HarnessApp {
                 value.push_str(text);
                 let _ = fixture.set_control(id, ControlValue::Text(value));
             }
+            EditingTarget::NumberControl(id) => {
+                if text
+                    .chars()
+                    .all(|character| character.is_ascii_digit() || ".-+eE".contains(character))
+                {
+                    self.number_draft.push_str(text);
+                    self.apply_number_draft(id);
+                }
+            }
         }
+    }
+
+    fn apply_number_draft(&mut self, id: &'static str) {
+        let Ok(value) = self.number_draft.parse::<f64>() else {
+            self.status = "Enter a valid number".into();
+            return;
+        };
+        let result = self
+            .selected_fixture_mut()
+            .expect("an edited control always has a selected fixture")
+            .set_control(id, ControlValue::Number(value));
+        self.status = match result {
+            Ok(()) => "Ready".into(),
+            Err(error) => error.to_string().into(),
+        };
+    }
+
+    fn text_is_multiline(&self, id: &str) -> bool {
+        self.selected_fixture().is_some_and(|fixture| {
+            fixture.props().definitions().iter().any(|definition| {
+                definition.id == id
+                    && matches!(
+                        definition.kind,
+                        ControlKind::Text {
+                            mode: TextMode::Multiline
+                        }
+                    )
+            })
+        })
     }
 
     fn persist(&self) {
@@ -401,7 +475,11 @@ impl HarnessApp {
                     props: self.fixtures[index].props(),
                     editing_text: match self.editing {
                         EditingTarget::TextControl(id) => Some(id),
-                        EditingTarget::Search => None,
+                        EditingTarget::Search | EditingTarget::NumberControl(_) => None,
+                    },
+                    editing_number: match self.editing {
+                        EditingTarget::NumberControl(id) => Some((id, self.number_draft.as_str())),
+                        EditingTarget::Search | EditingTarget::TextControl(_) => None,
                     },
                 },
                 control_handler,

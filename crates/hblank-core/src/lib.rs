@@ -10,6 +10,7 @@ pub use catalog::{
 };
 pub use control::{
     ControlDefinition, ControlError, ControlKind, ControlValue, HblankEnum, HblankProps,
+    NumberConstraints, TextMode,
 };
 
 #[doc(hidden)]

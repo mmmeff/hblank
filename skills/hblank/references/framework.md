@@ -58,11 +58,11 @@ The runtime joins components and variants, rejects duplicate canonical ids, unkn
 
 ## Controls
 
-`HblankProps` exposes static `ControlDefinition` metadata, current typed values, mutation, cloning, and downcasting. The derive reads named struct fields in declaration order.
+`HblankProps` exposes static `ControlDefinition` metadata, current typed values, validated mutation, cloning, and downcasting. The derive reads named struct fields in declaration order; `#[hblank(skip)]` excludes a field without requiring `ControlField`.
 
-`HblankEnum` supports unit variants. Use `#[hblank(label = "High contrast")]` on enum variants or fields when identifier humanization is insufficient.
+`String` controls are single-line by default; `#[hblank(multiline)]` selects the multiline editor. Numeric values pass through `f64`; `min`, `max`, and positive `step` literals become enforced metadata and drive direct input plus steppers. Integer updates still reject non-finite, fractional, and out-of-range values rather than truncating.
 
-Numeric values pass through `f64` in the control model. Integer updates reject non-finite, fractional, and out-of-range values rather than truncating silently.
+`HblankEnum` supports unit variants. Use `#[hblank(label = "High contrast")]` when identifier humanization is insufficient. Small enums render as chips and larger enums as a compact list.
 
 ## Harness state
 

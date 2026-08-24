@@ -18,8 +18,10 @@ pub struct FixtureCardProps {
     /// Controls whether the card appears active.
     pub active: bool,
     /// Main label rendered by the card.
+    #[hblank(multiline)]
     pub label: String,
     /// Number shown in the card's presentation data.
+    #[hblank(min = 0, max = 10, step = 1)]
     pub count: u32,
     /// Accent treatment used by the card.
     pub accent: Accent,

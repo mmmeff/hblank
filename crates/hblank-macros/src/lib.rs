@@ -35,31 +35,41 @@ fn expand_hblank_props(input: DeriveInput) -> syn::Result<proc_macro2::TokenStre
     let mut writers = Vec::with_capacity(fields.named.len());
 
     for field in fields.named {
+        let options = field_options(&field.attrs)?;
+        if options.skip {
+            continue;
+        }
         let ident = field
             .ident
             .ok_or_else(|| Error::new_spanned(&field.ty, "HblankProps requires named fields"))?;
         let ty = field.ty;
         let id = ident.to_string();
-        let label = field_label(&field.attrs)?.unwrap_or_else(|| humanize(&id));
+        let kind = control_kind(&ty, &options);
+        let label = options.label.unwrap_or_else(|| humanize(&id));
         let docs = docs(&field.attrs);
-
-        definitions.push(quote! {
+        let definition = quote! {
             ::hblank::ControlDefinition {
                 id: #id,
                 label: #label,
                 docs: #docs,
-                kind: <#ty as ::hblank::__private::ControlField>::KIND,
+                kind: #kind,
             }
-        });
+        };
+
+        definitions.push(definition.clone());
         readers.push(quote! {
             #id => Some(<#ty as ::hblank::__private::ControlField>::to_control_value(&self.#ident))
         });
         writers.push(quote! {
-            #id => <#ty as ::hblank::__private::ControlField>::set_control_value(
-                &mut self.#ident,
-                #id,
-                value,
-            )
+            #id => {
+                let definition = #definition;
+                definition.validate(&value)?;
+                <#ty as ::hblank::__private::ControlField>::set_control_value(
+                    &mut self.#ident,
+                    #id,
+                    value,
+                )
+            }
         });
     }
 
@@ -401,8 +411,44 @@ fn docs(attributes: &[Attribute]) -> String {
         .join("\n")
 }
 
-fn field_label(attributes: &[Attribute]) -> syn::Result<Option<String>> {
-    let mut label = None;
+#[derive(Default)]
+struct FieldOptions {
+    label: Option<String>,
+    skip: bool,
+    multiline: bool,
+    min: Option<f64>,
+    max: Option<f64>,
+    step: Option<f64>,
+}
+
+impl FieldOptions {
+    const fn has_number_constraints(&self) -> bool {
+        self.min.is_some() || self.max.is_some() || self.step.is_some()
+    }
+}
+
+fn control_kind(ty: &Type, options: &FieldOptions) -> proc_macro2::TokenStream {
+    let mut kind = quote!(<#ty as ::hblank::__private::ControlField>::KIND);
+    if options.multiline {
+        kind = quote!((#kind).multiline());
+    }
+    if options.has_number_constraints() {
+        let min = option_f64(options.min);
+        let max = option_f64(options.max);
+        let step = options.step.unwrap_or(1.0);
+        kind = quote! {
+            (#kind).constrained(::hblank::NumberConstraints {
+                min: #min,
+                max: #max,
+                step: #step,
+            })
+        };
+    }
+    kind
+}
+
+fn field_options(attributes: &[Attribute]) -> syn::Result<FieldOptions> {
+    let mut options = FieldOptions::default();
     for attribute in attributes {
         if !attribute.path().is_ident("hblank") {
             continue;
@@ -410,14 +456,73 @@ fn field_label(attributes: &[Attribute]) -> syn::Result<Option<String>> {
         attribute.parse_nested_meta(|meta| {
             if meta.path.is_ident("label") {
                 let value: LitStr = meta.value()?.parse()?;
-                label = Some(value.value());
-                Ok(())
+                options.label = Some(value.value());
+            } else if meta.path.is_ident("skip") {
+                options.skip = true;
+            } else if meta.path.is_ident("multiline") {
+                options.multiline = true;
+            } else if meta.path.is_ident("min") {
+                options.min = Some(parse_number(meta.value()?.parse()?)?);
+            } else if meta.path.is_ident("max") {
+                options.max = Some(parse_number(meta.value()?.parse()?)?);
+            } else if meta.path.is_ident("step") {
+                options.step = Some(parse_number(meta.value()?.parse()?)?);
             } else {
-                Err(meta.error("expected label = \"…\""))
+                return Err(meta.error("expected one of: label, skip, multiline, min, max, step"));
             }
+            Ok(())
         })?;
     }
-    Ok(label)
+    if let Some(step) = options.step
+        && (!step.is_finite() || step <= 0.0)
+    {
+        return Err(Error::new(
+            proc_macro2::Span::call_site(),
+            "control step must be finite and greater than zero",
+        ));
+    }
+    if options.min.is_some_and(|value| !value.is_finite())
+        || options.max.is_some_and(|value| !value.is_finite())
+    {
+        return Err(Error::new(
+            proc_macro2::Span::call_site(),
+            "control bounds must be finite",
+        ));
+    }
+    if let (Some(min), Some(max)) = (options.min, options.max)
+        && min > max
+    {
+        return Err(Error::new(
+            proc_macro2::Span::call_site(),
+            "control min cannot exceed max",
+        ));
+    }
+    Ok(options)
+}
+
+fn parse_number(expression: Expr) -> syn::Result<f64> {
+    match expression {
+        Expr::Lit(ExprLit {
+            lit: Lit::Int(value),
+            ..
+        }) => value.base10_parse(),
+        Expr::Lit(ExprLit {
+            lit: Lit::Float(value),
+            ..
+        }) => value.base10_parse(),
+        Expr::Unary(unary) if matches!(unary.op, syn::UnOp::Neg(_)) => {
+            Ok(-parse_number(*unary.expr)?)
+        }
+        expression => Err(Error::new_spanned(expression, "expected a numeric literal")),
+    }
+}
+
+fn option_f64(value: Option<f64>) -> proc_macro2::TokenStream {
+    value.map_or_else(|| quote!(None), |value| quote!(Some(#value)))
+}
+
+fn field_label(attributes: &[Attribute]) -> syn::Result<Option<String>> {
+    Ok(field_options(attributes)?.label)
 }
 
 fn humanize(identifier: &str) -> String {

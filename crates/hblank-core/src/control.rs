@@ -10,11 +10,34 @@ use std::any::Any;
 
 use thiserror::Error;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TextMode {
+    SingleLine,
+    Multiline,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct NumberConstraints {
+    pub min: Option<f64>,
+    pub max: Option<f64>,
+    pub step: f64,
+}
+
+impl Default for NumberConstraints {
+    fn default() -> Self {
+        Self {
+            min: None,
+            max: None,
+            step: 1.0,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ControlKind {
     Boolean,
-    Text,
-    Number,
+    Text { mode: TextMode },
+    Number { constraints: NumberConstraints },
     Enum { options: &'static [&'static str] },
 }
 
@@ -23,9 +46,29 @@ impl ControlKind {
     pub const fn name(self) -> &'static str {
         match self {
             Self::Boolean => "boolean",
-            Self::Text => "text",
-            Self::Number => "number",
+            Self::Text { .. } => "text",
+            Self::Number { .. } => "number",
             Self::Enum { .. } => "enum",
+        }
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub const fn multiline(self) -> Self {
+        match self {
+            Self::Text { .. } => Self::Text {
+                mode: TextMode::Multiline,
+            },
+            _ => panic!("multiline is only valid for text controls"),
+        }
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub const fn constrained(self, constraints: NumberConstraints) -> Self {
+        match self {
+            Self::Number { .. } => Self::Number { constraints },
+            _ => panic!("min, max, and step are only valid for numeric controls"),
         }
     }
 }
@@ -58,6 +101,48 @@ pub struct ControlDefinition {
     pub kind: ControlKind,
 }
 
+impl ControlDefinition {
+    /// Validates metadata-level constraints before a typed field accepts a value.
+    ///
+    /// # Errors
+    /// Returns an error when a numeric value violates configured bounds or step.
+    pub fn validate(&self, value: &ControlValue) -> Result<(), ControlError> {
+        let (ControlKind::Number { constraints }, ControlValue::Number(value)) = (self.kind, value)
+        else {
+            return Ok(());
+        };
+        if let Some(min) = constraints.min
+            && *value < min
+        {
+            return Err(ControlError::BelowMinimum {
+                control: self.id,
+                min,
+                value: *value,
+            });
+        }
+        if let Some(max) = constraints.max
+            && *value > max
+        {
+            return Err(ControlError::AboveMaximum {
+                control: self.id,
+                max,
+                value: *value,
+            });
+        }
+        let origin = constraints.min.unwrap_or(0.0);
+        let quotient = (*value - origin) / constraints.step;
+        let tolerance = f64::EPSILON * 16.0 * quotient.abs().max(1.0);
+        if (quotient - quotient.round()).abs() > tolerance {
+            return Err(ControlError::StepMismatch {
+                control: self.id,
+                step: constraints.step,
+                value: *value,
+            });
+        }
+        Ok(())
+    }
+}
+
 #[derive(Debug, Error, PartialEq)]
 pub enum ControlError {
     #[error("unknown control '{0}'")]
@@ -70,6 +155,24 @@ pub enum ControlError {
     },
     #[error("{value} is not a valid value for numeric control '{control}'")]
     InvalidNumber { control: &'static str, value: f64 },
+    #[error("{value} is below the minimum {min} for numeric control '{control}'")]
+    BelowMinimum {
+        control: &'static str,
+        min: f64,
+        value: f64,
+    },
+    #[error("{value} is above the maximum {max} for numeric control '{control}'")]
+    AboveMaximum {
+        control: &'static str,
+        max: f64,
+        value: f64,
+    },
+    #[error("{value} does not align to step {step} for numeric control '{control}'")]
+    StepMismatch {
+        control: &'static str,
+        step: f64,
+        value: f64,
+    },
     #[error("'{value}' is not a valid option for control '{control}'")]
     InvalidOption {
         control: &'static str,
@@ -132,7 +235,9 @@ impl ControlField for bool {
 }
 
 impl ControlField for String {
-    const KIND: ControlKind = ControlKind::Text;
+    const KIND: ControlKind = ControlKind::Text {
+        mode: TextMode::SingleLine,
+    };
 
     fn to_control_value(&self) -> ControlValue {
         ControlValue::Text(self.clone())
@@ -159,7 +264,13 @@ macro_rules! numeric_control {
     ($($type:ty),+ $(,)?) => {
         $(
             impl ControlField for $type {
-                const KIND: ControlKind = ControlKind::Number;
+                const KIND: ControlKind = ControlKind::Number {
+                    constraints: NumberConstraints {
+                        min: None,
+                        max: None,
+                        step: 1.0,
+                    },
+                };
 
                 fn to_control_value(&self) -> ControlValue {
                     ControlValue::Number(*self as f64)
@@ -198,7 +309,13 @@ macro_rules! floating_control {
     ($($type:ty),+ $(,)?) => {
         $(
             impl ControlField for $type {
-                const KIND: ControlKind = ControlKind::Number;
+                const KIND: ControlKind = ControlKind::Number {
+                    constraints: NumberConstraints {
+                        min: None,
+                        max: None,
+                        step: 1.0,
+                    },
+                };
 
                 fn to_control_value(&self) -> ControlValue {
                     ControlValue::Number(f64::from(*self))

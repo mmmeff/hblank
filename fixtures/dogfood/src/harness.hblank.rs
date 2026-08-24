@@ -280,6 +280,7 @@ fn controls_fixture(
             definitions: props.definitions(),
             props,
             editing_text: Some("label"),
+            editing_number: None,
         },
         noop(),
     )
