@@ -19,8 +19,9 @@ Conventional commits determine whether a release exists and which version to cho
 The pre-1.0 history starts from a `v0.0.0` tag on the repository root commit. The workflow checks that tag before running semantic-release.
 
 ## Workflow
-
 `.github/workflows/release.yml` runs on every push to `main` and through manual dispatch.
+
+Before semantic-release, the job checks whether the workspace version already has a tag. If it does, `scripts/publish-crates.sh` resumes any missing crate publication. The script skips crates that crates.io already indexes.
 
 The job:
 
@@ -30,8 +31,9 @@ The job:
 4. runs `cargo fmt --all -- --check`
 5. runs `cargo test --workspace --locked`
 6. requests a short-lived crates.io token through GitHub OIDC
-7. falls back to the bootstrap secret during first-time setup
-8. runs semantic-release
+7. uses the bootstrap secret when it exists
+8. resumes an incomplete publication for the current tagged workspace version
+9. runs semantic-release
 
 Semantic-release then:
 
@@ -101,8 +103,8 @@ The wizard has seven stages:
 3. create or verify the `v0.0.0` baseline tag
 4. dispatch the first automated release
 5. add `release.yml` as a Trusted Publisher for each of the four crates
-6. dispatch a verification run that must use a short-lived token
-7. delete the bootstrap secret
+6. delete the bootstrap secret
+7. dispatch a verification run that must use a short-lived token
 
 The wizard requires an authenticated GitHub CLI and checks that it is running in `mmmeff/hblank`.
 
@@ -115,7 +117,9 @@ Workflow: release.yml
 Environment: empty
 ```
 
-Do not delete the bootstrap secret until the verification log contains:
+Keep the bootstrap secret until all four crate names exist and have trusted publishers. The bootstrap token has `publish-new` permission. A trusted token cannot claim a new crate name.
+
+Delete the bootstrap secret after the trusted publishers exist. Then dispatch the verification run. Its log must contain:
 
 ```text
 Using a short-lived crates.io trusted-publishing token

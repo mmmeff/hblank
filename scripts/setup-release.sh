@@ -283,8 +283,15 @@ step "Open Trusted Publishers and add a GitHub Actions publisher."
 step "Owner: mmmeff; repository: hblank; workflow: release.yml; environment: leave blank."
 pause "Press Enter after the hblank-cli publisher is saved."
 
-stage "Verify OIDC and remove token"
-say "A no-release run will prove the workflow can obtain a short-lived crates.io token before the bootstrap secret is deleted."
+stage "Remove bootstrap token and verify OIDC"
+say "Every crate name must now exist and have a Trusted Publisher entry."
+if ! confirm "Delete the CARGO_REGISTRY_TOKEN bootstrap secret now?"; then
+  warn "Trusted Publishing cannot be verified while the bootstrap token exists."
+  exit 1
+fi
+gh secret delete CARGO_REGISTRY_TOKEN --repo "$REPOSITORY"
+WRITTEN_SECRET=()
+note "The bootstrap secret is deleted. Future releases must use short-lived OIDC credentials."
 gh workflow run "$WORKFLOW" --repo "$REPOSITORY" --ref main
 sleep 3
 verification_run_id="$(gh run list --repo "$REPOSITORY" --workflow "$WORKFLOW" --branch main --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId')"
@@ -295,16 +302,9 @@ fi
 gh run watch "$verification_run_id" --repo "$REPOSITORY" --exit-status
 verification_log="$(gh run view "$verification_run_id" --repo "$REPOSITORY" --log)"
 if [[ "$verification_log" != *"Using a short-lived crates.io trusted-publishing token"* ]]; then
-  warn "The workflow used the bootstrap token. Recheck all four Trusted Publisher entries before deleting it."
+  warn "The workflow did not use a short-lived crates.io trusted-publishing token."
   exit 1
 fi
-if confirm "Delete the CARGO_REGISTRY_TOKEN bootstrap secret now?"; then
-  gh secret delete CARGO_REGISTRY_TOKEN --repo "$REPOSITORY"
-  WRITTEN_SECRET=()
-  note "Future releases will use only short-lived OIDC credentials."
-else
-  warn "Delete it later with: gh secret delete CARGO_REGISTRY_TOKEN --repo $REPOSITORY"
-  SKIPPED+=("GitHub secret CARGO_REGISTRY_TOKEN (delete after Trusted Publishing works)")
-fi
+note "Future releases will use only short-lived OIDC credentials."
 
 finish

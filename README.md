@@ -28,35 +28,12 @@ Most component work happens in states that the full app makes awkward to reach. 
 
 There is no JavaScript layer and no second JSON version of your props. Hblank runs the same GPUI code your application runs.
 
-## Try it
-
-Clone the repository and open the dogfood project:
-
-```bash
-git clone https://github.com/mmmeff/hblank.git
-cd hblank
-cargo run -p hblank-cli -- dev --project fixtures/dogfood
-```
-
-The window contains the fixture card and the components used to build Hblank itself. Change a label in `fixtures/dogfood/src/lib.rs`, save it, and watch the preview reload.
-
-To open one exact fixture:
-
-```bash
-cargo run -p hblank-cli -- dev --project fixtures/dogfood --fixture-id 'src/fixture_card.hblank.rs#fixture_card_default'
-```
-
 ## Add Hblank to a project
 
-Install the CLI from crates.io:
+Run these commands from the existing GPUI project:
 
 ```bash
 cargo install hblank-cli
-```
-
-Add the runtime to your GPUI project:
-
-```bash
 cargo add hblank
 hblank init
 hblank dev
