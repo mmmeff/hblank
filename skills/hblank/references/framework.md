@@ -64,6 +64,8 @@ The runtime joins components and variants, rejects duplicate canonical ids, unkn
 
 `HblankEnum` supports unit variants. Use `#[hblank(label = "High contrast")]` when identifier humanization is insufficient. Small enums render as chips and larger enums as a compact list.
 
+`HblankControlAdapter<T>` maps a project domain type onto a built-in carrier type. `#[hblank(adapter = AdapterType)]` makes the derive call that adapter while preserving Hblank-owned metadata validation and editor behavior; adapters do not provide arbitrary control rendering.
+
 ## Harness state
 
 The GPUI harness owns selection, filtering, active inspector tab, editing target, and mutable fixture props. Presentational harness functions live separately under `hblank::harness`.

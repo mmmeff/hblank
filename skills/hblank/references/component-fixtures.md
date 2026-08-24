@@ -143,6 +143,39 @@ fn account_card_default() -> AccountCardFixtureProps {
 
 The adapter is not a second production model. It is a small fixture interface that selects presentation-relevant values and supplies inert callback/resource values explicitly.
 
+## Domain control adapters
+
+Map a project newtype to one built-in control carrier. Hblank retains the editor, validation, reset, and session-state implementation:
+
+```rust
+use hblank::{HblankControlAdapter, HblankProps};
+
+#[derive(Clone, Default)]
+struct Percentage(u8);
+
+struct PercentageControl;
+
+impl HblankControlAdapter<Percentage> for PercentageControl {
+    type Value = u8;
+
+    fn to_control(value: &Percentage) -> u8 {
+        value.0
+    }
+
+    fn apply_control(value: &mut Percentage, control: u8) {
+        value.0 = control;
+    }
+}
+
+#[derive(Clone, Default, HblankProps)]
+struct ProgressProps {
+    #[hblank(adapter = PercentageControl, min = 0, max = 100, step = 5)]
+    progress: Percentage,
+}
+```
+
+Adapters convert values only. They do not render custom GPUI editors or bypass the built-in control validation contract.
+
 ## Multiple states in one file
 
 Multiple functions may register from one fixture file. Give every registration a unique id. Direct path launch selects the first after global group/title/id sorting, so use separate files when a particular state must have an unambiguous path target.

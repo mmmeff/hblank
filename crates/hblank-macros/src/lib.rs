@@ -55,22 +55,12 @@ fn expand_hblank_props(input: DeriveInput) -> syn::Result<proc_macro2::TokenStre
                 kind: #kind,
             }
         };
+        let (reader, writer) =
+            control_accessors(&ty, &ident, &id, &definition, options.adapter.as_ref());
 
-        definitions.push(definition.clone());
-        readers.push(quote! {
-            #id => Some(<#ty as ::hblank::__private::ControlField>::to_control_value(&self.#ident))
-        });
-        writers.push(quote! {
-            #id => {
-                let definition = #definition;
-                definition.validate(&value)?;
-                <#ty as ::hblank::__private::ControlField>::set_control_value(
-                    &mut self.#ident,
-                    #id,
-                    value,
-                )
-            }
-        });
+        definitions.push(definition);
+        readers.push(reader);
+        writers.push(writer);
     }
 
     Ok(quote! {
@@ -419,6 +409,7 @@ struct FieldOptions {
     min: Option<f64>,
     max: Option<f64>,
     step: Option<f64>,
+    adapter: Option<Path>,
 }
 
 impl FieldOptions {
@@ -428,7 +419,15 @@ impl FieldOptions {
 }
 
 fn control_kind(ty: &Type, options: &FieldOptions) -> proc_macro2::TokenStream {
-    let mut kind = quote!(<#ty as ::hblank::__private::ControlField>::KIND);
+    let mut kind = options.adapter.as_ref().map_or_else(
+        || quote!(<#ty as ::hblank::__private::ControlField>::KIND),
+        |adapter| {
+            quote!(
+                <<#adapter as ::hblank::HblankControlAdapter<#ty>>::Value
+                    as ::hblank::__private::ControlField>::KIND
+            )
+        },
+    );
     if options.multiline {
         kind = quote!((#kind).multiline());
     }
@@ -445,6 +444,73 @@ fn control_kind(ty: &Type, options: &FieldOptions) -> proc_macro2::TokenStream {
         };
     }
     kind
+}
+
+fn control_accessors(
+    ty: &Type,
+    ident: &syn::Ident,
+    id: &str,
+    definition: &proc_macro2::TokenStream,
+    adapter: Option<&Path>,
+) -> (proc_macro2::TokenStream, proc_macro2::TokenStream) {
+    adapter.map_or_else(
+        || {
+            (
+                quote! {
+                    #id => Some(
+                        <#ty as ::hblank::__private::ControlField>::to_control_value(&self.#ident)
+                    )
+                },
+                quote! {
+                    #id => {
+                        let definition = #definition;
+                        definition.validate(&value)?;
+                        <#ty as ::hblank::__private::ControlField>::set_control_value(
+                            &mut self.#ident,
+                            #id,
+                            value,
+                        )
+                    }
+                },
+            )
+        },
+        |adapter| {
+            (
+                quote! {
+                    #id => {
+                        let control = <#adapter as ::hblank::HblankControlAdapter<#ty>>::to_control(
+                            &self.#ident,
+                        );
+                        Some(
+                            <<#adapter as ::hblank::HblankControlAdapter<#ty>>::Value
+                                as ::hblank::__private::ControlField>::to_control_value(&control)
+                        )
+                    }
+                },
+                quote! {
+                    #id => {
+                        let definition = #definition;
+                        definition.validate(&value)?;
+                        let mut control =
+                            <#adapter as ::hblank::HblankControlAdapter<#ty>>::to_control(
+                                &self.#ident,
+                            );
+                        <<#adapter as ::hblank::HblankControlAdapter<#ty>>::Value
+                            as ::hblank::__private::ControlField>::set_control_value(
+                                &mut control,
+                                #id,
+                                value,
+                            )?;
+                        <#adapter as ::hblank::HblankControlAdapter<#ty>>::apply_control(
+                            &mut self.#ident,
+                            control,
+                        );
+                        Ok(())
+                    }
+                },
+            )
+        },
+    )
 }
 
 fn field_options(attributes: &[Attribute]) -> syn::Result<FieldOptions> {
@@ -467,8 +533,12 @@ fn field_options(attributes: &[Attribute]) -> syn::Result<FieldOptions> {
                 options.max = Some(parse_number(meta.value()?.parse()?)?);
             } else if meta.path.is_ident("step") {
                 options.step = Some(parse_number(meta.value()?.parse()?)?);
+            } else if meta.path.is_ident("adapter") {
+                options.adapter = Some(meta.value()?.parse()?);
             } else {
-                return Err(meta.error("expected one of: label, skip, multiline, min, max, step"));
+                return Err(
+                    meta.error("expected one of: label, skip, multiline, min, max, step, adapter")
+                );
             }
             Ok(())
         })?;

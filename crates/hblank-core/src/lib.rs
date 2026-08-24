@@ -9,8 +9,8 @@ pub use catalog::{
     assemble_catalog, canonical_source_id,
 };
 pub use control::{
-    ControlDefinition, ControlError, ControlKind, ControlValue, HblankEnum, HblankProps,
-    NumberConstraints, TextMode,
+    ControlDefinition, ControlError, ControlKind, ControlValue, HblankControlAdapter, HblankEnum,
+    HblankProps, NumberConstraints, TextMode,
 };
 
 #[doc(hidden)]

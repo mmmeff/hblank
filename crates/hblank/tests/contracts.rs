@@ -1,7 +1,7 @@
 use hblank::gpui::{App, IntoElement, ParentElement, Window, div};
 use hblank::{
-    ControlError, ControlKind, ControlValue, HblankEnum, HblankProps, NumberConstraints, TextMode,
-    component, fixture, registered_catalog,
+    ControlError, ControlKind, ControlValue, HblankControlAdapter, HblankEnum, HblankProps,
+    NumberConstraints, TextMode, component, fixture, registered_catalog,
 };
 
 #[derive(Clone, Default, HblankEnum)]
@@ -10,6 +10,23 @@ enum Tone {
     Neutral,
     #[hblank(label = "High contrast")]
     HighContrast,
+}
+
+#[derive(Clone, Default)]
+struct Percentage(u8);
+
+struct PercentageControl;
+
+impl HblankControlAdapter<Percentage> for PercentageControl {
+    type Value = u8;
+
+    fn to_control(value: &Percentage) -> Self::Value {
+        value.0
+    }
+
+    fn apply_control(value: &mut Percentage, control: Self::Value) {
+        value.0 = control;
+    }
 }
 
 #[derive(Clone, Default, HblankProps)]
@@ -24,6 +41,9 @@ struct DemoProps {
     count: u32,
     /// Color treatment used by the component.
     tone: Tone,
+    /// Completion percentage mapped from a domain newtype.
+    #[hblank(adapter = PercentageControl, min = 0, max = 100, step = 5)]
+    progress: Percentage,
     #[hblank(skip)]
     internal_path: std::path::PathBuf,
 }
@@ -54,7 +74,7 @@ fn derives_control_metadata_and_values() {
     let props = DemoProps::default();
     let definitions = props.definitions();
 
-    assert_eq!(definitions.len(), 4);
+    assert_eq!(definitions.len(), 5);
     assert_eq!(definitions[0].id, "emphasized");
     assert_eq!(definitions[0].label, "Emphasized");
     assert_eq!(definitions[0].docs, "Whether the component is emphasized.");
@@ -82,8 +102,22 @@ fn derives_control_metadata_and_values() {
         }
     );
     assert_eq!(
+        definitions[4].kind,
+        ControlKind::Number {
+            constraints: NumberConstraints {
+                min: Some(0.0),
+                max: Some(100.0),
+                step: 5.0,
+            }
+        }
+    );
+    assert_eq!(
         props.control_value("tone"),
         Some(ControlValue::Enum("Neutral".to_owned()))
+    );
+    assert_eq!(
+        props.control_value("progress"),
+        Some(ControlValue::Number(0.0))
     );
 }
 
@@ -109,6 +143,9 @@ fn mutates_every_supported_control_type_and_resets() {
     fixture
         .set_control("tone", ControlValue::Enum("High contrast".to_owned()))
         .expect("enum control should update");
+    fixture
+        .set_control("progress", ControlValue::Number(65.0))
+        .expect("adapted domain control should update");
 
     assert_eq!(
         fixture.props().control_value("emphasized"),
@@ -125,6 +162,20 @@ fn mutates_every_supported_control_type_and_resets() {
     assert_eq!(
         fixture.props().control_value("tone"),
         Some(ControlValue::Enum("High contrast".to_owned()))
+    );
+    assert_eq!(
+        fixture.props().control_value("progress"),
+        Some(ControlValue::Number(65.0))
+    );
+    assert_eq!(
+        fixture
+            .props()
+            .as_any()
+            .downcast_ref::<DemoProps>()
+            .expect("fixture should retain typed props")
+            .progress
+            .0,
+        65
     );
 
     fixture.reset();

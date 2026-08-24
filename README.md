@@ -195,6 +195,8 @@ Open **Badge** and change its generated controls:
 
 Use `#[hblank(skip)]` to keep a field in the props type without generating a control. Visible controls remain in Rust field declaration order. Every accepted change updates the typed props and rerenders the isolated GPUI component immediately.
 
+Domain types do not need to become harness-only primitives. Implement `HblankControlAdapter<T>`, choose a built-in carrier such as `u8` or `String`, and annotate the field with `#[hblank(adapter = MyAdapter)]`. Hblank keeps ownership of editor rendering, constraints, reset, and session state while project code owns conversion.
+
 ## Configure discovery
 
 Edit `.hblank/config.toml` when your project uses a different convention:

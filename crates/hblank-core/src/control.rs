@@ -198,6 +198,17 @@ impl Clone for Box<dyn HblankProps> {
     }
 }
 
+/// Maps a project domain type onto one of Hblank's built-in control value types.
+///
+/// The adapter keeps domain conversion in project code while Hblank owns editor UI,
+/// validation, reset behavior, and session serialization.
+pub trait HblankControlAdapter<T> {
+    type Value: ControlField;
+
+    fn to_control(value: &T) -> Self::Value;
+    fn apply_control(value: &mut T, control: Self::Value);
+}
+
 #[doc(hidden)]
 pub trait ControlField: Sized {
     const KIND: ControlKind;

@@ -80,7 +80,7 @@ Supported automatic controls:
 | integer or float | direct editor and configured stepper; optional `min`, `max`, `step` |
 | unit enum deriving `HblankEnum` | chips for small enums, list for larger enums |
 
-Use `#[hblank(skip)]` for props fields that must not become controls. Put user-facing explanations in field doc comments. If production props contain unsupported or stateful fields, define a fixture-only presentation props type from supported fields and map it into the production props. Do not weaken the production model for the harness.
+Use `#[hblank(skip)]` for props fields that must not become controls. For a project domain newtype that maps cleanly to a built-in bool, string, number, or enum carrier, implement `HblankControlAdapter<T>` and annotate the field with `#[hblank(adapter = AdapterType)]`; do not duplicate the domain as fixture-only primitive state. Put user-facing explanations in field doc comments. For unsupported stateful/resource fields, use `skip` or a focused fixture props type. Do not weaken the production model for the harness.
 
 Read [references/component-fixtures.md](references/component-fixtures.md) before creating a new component or fixture.
 
