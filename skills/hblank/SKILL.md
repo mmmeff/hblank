@@ -1,11 +1,11 @@
 ---
-name: hbuild
-description: Build, run, debug, and iterate Rust GPUI components with Hblank/Hbuild. Use when an agent works in a project containing .hblank/config.toml, edits *.hblank.rs fixtures, derives HblankProps or HblankEnum, runs hblank init or hblank dev, opens a fixture by path, or maintains the Hblank framework itself.
+name: hblank
+description: Build, run, debug, and iterate Rust GPUI components with Hblank. Use when an agent works in a project containing .hblank/config.toml, edits *.hblank.rs fixtures, derives HblankProps or HblankEnum, runs hblank init or hblank dev, opens a fixture by path, or maintains the Hblank framework itself.
 ---
 
-# Hbuild
+# Hblank
 
-Hbuild is the agent skill for component development with the Hblank framework. The current crates and executable are named `hblank`; use repository and `--help` evidence rather than inventing a `hbuild` executable.
+Hblank is the agent skill for component development with the Hblank framework. The crates and executable are also named `hblank`; use repository and `--help` evidence for exact commands.
 
 ## Outcome
 

@@ -26,22 +26,22 @@ cargo run -p hblank-cli -- dev --project fixtures/dogfood
 
 A GPUI window opens with Hblank's fixture card and every presentational component used to build the harness itself.
 
-## Give your AI agent Hbuild
+## Give your AI agent Hblank
 
 Install the framework skill into any agent supported by the Skills CLI:
 
 ```bash
-npx skills add mmmeff/hbuild
+npx skills add mmmeff/hblank
 ```
 
-The command resolves `https://github.com/mmmeff/hbuild`; the repository must be public or accessible through the user's GitHub credentials.
+The command resolves `https://github.com/mmmeff/hblank`; the repository must be public or accessible through the user's GitHub credentials.
 
-The installed skill is named `hbuild`. It gives the agent the framework model, exact component and fixture contracts, CLI workflows, generated-control rules, Rustdoc behavior, direct fixture launch, hot-reload lifecycle, debugging decision tree, and verification gates. The current framework executable and Rust crates remain named `hblank`.
+The installed skill is named `hblank`. It gives the agent the framework model, exact component and fixture contracts, CLI workflows, generated-control rules, Rustdoc behavior, direct fixture launch, hot-reload lifecycle, debugging decision tree, and verification gates.
 
 Invoke it before component work, for example:
 
 ```text
-Use the hbuild skill to add an isolated loading-state fixture for AccountCard, run it directly, and verify every control.
+Use the hblank skill to add an isolated loading-state fixture for AccountCard, run it directly, and verify every control.
 ```
 
 The skill teaches agents to:
@@ -56,7 +56,7 @@ The skill teaches agents to:
 To inspect the published skill before installing:
 
 ```bash
-npx skills add mmmeff/hbuild --list
+npx skills add mmmeff/hblank --list
 ```
 
 ## Add Hblank to a GPUI project

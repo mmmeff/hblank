@@ -1,8 +1,8 @@
-# Hbuild framework reference
+# Hblank framework reference
 
 ## Naming
 
-The installable skill is `hbuild`. The current framework package and command names are:
+The installable skill, framework packages, and command are all named `hblank`:
 
 | Role | Name |
 |---|---|
