@@ -21,7 +21,7 @@ The pre-1.0 history starts from a `v0.0.0` tag on the repository root commit. Th
 ## Workflow
 `.github/workflows/release.yml` runs on every push to `main` and through manual dispatch.
 
-Before semantic-release, the job checks whether the workspace version already has a tag. If it does, `scripts/publish-crates.sh` resumes any missing crate publication. The script skips crates that crates.io already indexes.
+Before semantic-release, the job resumes a tagged workspace version's missing crate publication. It then creates GitHub Releases for up to 20 tagged versions whose four crates are all indexed. Both recovery steps are idempotent.
 
 The job:
 
@@ -33,7 +33,8 @@ The job:
 6. requests a short-lived crates.io token through GitHub OIDC
 7. uses the bootstrap secret when it exists
 8. resumes an incomplete publication for the current tagged workspace version
-9. runs semantic-release
+9. publishes missing GitHub Releases for fully indexed crate versions
+10. runs semantic-release
 
 Semantic-release then:
 
@@ -77,6 +78,8 @@ The macro and CLI crates inherit the workspace version without extra manifest ed
 The script waits up to five minutes for each version to appear in the crates.io index before moving to the next crate.
 
 A retry with the same version checks crates.io first and skips any crate that already exists. This makes a partial publish recoverable without uploading the same crate twice.
+
+`scripts/publish-github-releases.sh` creates any missing GitHub Release only after all four crates for its tag are indexed. It checks the 20 newest reachable release tags, in version order. Its release body comes from `CHANGELOG.md`.
 
 Check a release without publishing:
 
@@ -146,6 +149,8 @@ bash scripts/publish-crates.sh VERSION
 ```
 
 The script skips indexed crates and resumes at the first missing one.
+
+If semantic-release tagged a version before crate publication failed, the next `release.yml` run publishes its missing crates and GitHub Release. Do not delete the tag. The recovery steps need it.
 
 Do not bump the workspace version to work around a missing dependency crate. Publish the missing crate at the version already referenced by the release manifests.
 
