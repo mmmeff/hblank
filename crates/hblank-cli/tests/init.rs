@@ -21,7 +21,7 @@ fn generated_bytes(project: &Path) -> BTreeMap<String, Vec<u8>> {
         ".hblank/config.toml",
         ".hblank/Cargo.toml",
         ".hblank/src/main.rs",
-        ".hblank/generated/examples.rs",
+        ".hblank/generated/fixtures.rs",
         ".hblank/.gitignore",
     ]
     .into_iter()
@@ -53,7 +53,7 @@ fn initializes_complete_preview_without_touching_host_files() {
     );
 
     let config = Config::load(project.path()).expect("generated config should parse");
-    assert_eq!(config.examples, ["src/**/*.hblank.rs"]);
+    assert_eq!(config.fixtures, ["src/**/*.hblank.rs"]);
     assert_eq!(config.window.title, "demo-app · Hblank");
 
     let preview_manifest = fs::read_to_string(project.path().join(".hblank/Cargo.toml"))

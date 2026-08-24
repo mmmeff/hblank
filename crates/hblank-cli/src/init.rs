@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use crate::config::Config;
 
-const GENERATED_PATH: &str = ".hblank/generated/examples.rs";
+const GENERATED_PATH: &str = ".hblank/generated/fixtures.rs";
 const PREVIEW_MANIFEST_PATH: &str = ".hblank/Cargo.toml";
 const PREVIEW_MAIN_PATH: &str = ".hblank/src/main.rs";
 const HBLANK_IGNORE_PATH: &str = ".hblank/.gitignore";
@@ -185,8 +185,8 @@ hblank_project = {{ package = "{package_name}", path = ".." }}
 }
 
 const fn preview_main() -> &'static str {
-    r#"mod examples {
-    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/generated/examples.rs"));
+    r#"mod fixtures {
+    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/generated/fixtures.rs"));
 }
 
 fn main() {

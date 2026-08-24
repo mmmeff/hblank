@@ -154,22 +154,22 @@ fn expand_hblank_enum(input: DeriveInput) -> syn::Result<proc_macro2::TokenStrea
 }
 
 #[derive(Default)]
-struct ExampleArgs {
+struct FixtureArgs {
     id: Option<LitStr>,
     title: Option<LitStr>,
     group: Option<LitStr>,
 }
 
 #[proc_macro_attribute]
-pub fn example(args: TokenStream, input: TokenStream) -> TokenStream {
-    let mut example_args = ExampleArgs::default();
+pub fn fixture(args: TokenStream, input: TokenStream) -> TokenStream {
+    let mut fixture_args = FixtureArgs::default();
     let parser = syn::meta::parser(|meta| {
         if meta.path.is_ident("id") {
-            example_args.id = Some(meta.value()?.parse()?);
+            fixture_args.id = Some(meta.value()?.parse()?);
         } else if meta.path.is_ident("title") {
-            example_args.title = Some(meta.value()?.parse()?);
+            fixture_args.title = Some(meta.value()?.parse()?);
         } else if meta.path.is_ident("group") {
-            example_args.group = Some(meta.value()?.parse()?);
+            fixture_args.group = Some(meta.value()?.parse()?);
         } else {
             return Err(meta.error("expected one of: id, title, group"));
         }
@@ -177,22 +177,22 @@ pub fn example(args: TokenStream, input: TokenStream) -> TokenStream {
     });
     syn::parse_macro_input!(args with parser);
     let function = parse_macro_input!(input as ItemFn);
-    expand_example(example_args, &function)
+    expand_fixture(fixture_args, &function)
         .unwrap_or_else(Error::into_compile_error)
         .into()
 }
 
-fn expand_example(args: ExampleArgs, function: &ItemFn) -> syn::Result<proc_macro2::TokenStream> {
+fn expand_fixture(args: FixtureArgs, function: &ItemFn) -> syn::Result<proc_macro2::TokenStream> {
     if function.sig.asyncness.is_some() {
         return Err(Error::new_spanned(
             &function.sig,
-            "Hblank examples must render synchronously",
+            "Hblank fixtures must render synchronously",
         ));
     }
     if function.sig.inputs.len() != 3 {
         return Err(Error::new_spanned(
             &function.sig.inputs,
-            "Hblank examples take exactly (&Props, &mut gpui::Window, &mut gpui::App)",
+            "Hblank fixtures take exactly (&Props, &mut gpui::Window, &mut gpui::App)",
         ));
     }
 
@@ -204,19 +204,19 @@ fn expand_example(args: ExampleArgs, function: &ItemFn) -> syn::Result<proc_macr
     let FnArg::Typed(first) = first else {
         return Err(Error::new_spanned(
             first,
-            "the first example argument must be &Props",
+            "the first fixture argument must be &Props",
         ));
     };
     let Type::Reference(props_reference) = first.ty.as_ref() else {
         return Err(Error::new_spanned(
             &first.ty,
-            "the first example argument must be &Props",
+            "the first fixture argument must be &Props",
         ));
     };
     if props_reference.mutability.is_some() {
         return Err(Error::new_spanned(
             &first.ty,
-            "example props are immutable; mutate them through harness controls",
+            "fixture props are immutable; mutate them through harness controls",
         ));
     }
     let props_type = props_reference.elem.as_ref();
@@ -238,7 +238,7 @@ fn expand_example(args: ExampleArgs, function: &ItemFn) -> syn::Result<proc_macr
         #function
 
         #[doc(hidden)]
-        fn #builder_name() -> ::hblank::ExampleDefinition {
+        fn #builder_name() -> ::hblank::FixtureDefinition {
             fn render(
                 props: &dyn ::hblank::HblankProps,
                 window: &mut ::hblank::gpui::Window,
@@ -247,14 +247,14 @@ fn expand_example(args: ExampleArgs, function: &ItemFn) -> syn::Result<proc_macr
                 let props = props
                     .as_any()
                     .downcast_ref::<#props_type>()
-                    .expect("Hblank example received the wrong props type");
+                    .expect("Hblank fixture received the wrong props type");
                 ::hblank::gpui::IntoElement::into_any_element(
                     #function_name(props, window, cx),
                 )
             }
 
-            ::hblank::ExampleDefinition::new(
-                ::hblank::ExampleMetadata {
+            ::hblank::FixtureDefinition::new(
+                ::hblank::FixtureMetadata {
                     id: #id,
                     title: #title,
                     group: #group,
@@ -268,7 +268,7 @@ fn expand_example(args: ExampleArgs, function: &ItemFn) -> syn::Result<proc_macr
         }
 
         ::hblank::__private::inventory::submit! {
-            ::hblank::ExampleRegistration { build: #builder_name }
+            ::hblank::FixtureRegistration { build: #builder_name }
         }
     })
 }

@@ -12,7 +12,7 @@ use gpui::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{ControlValue, ExampleDefinition, registered_examples};
+use crate::{ControlValue, FixtureDefinition, registered_fixtures};
 
 use super::components::{
     CanvasProps, ControlAction, ControlsPanelProps, DocsPanelProps, EmptyStateProps, HeaderProps,
@@ -43,7 +43,7 @@ enum EditingTarget {
 }
 
 struct HarnessApp {
-    examples: Vec<ExampleDefinition>,
+    fixtures: Vec<FixtureDefinition>,
     navigation: Vec<NavigationItem>,
     selected: Option<usize>,
     filter: String,
@@ -94,26 +94,26 @@ impl HarnessApp {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let state_path = state_path();
         let persisted = load_state(&state_path);
-        let (examples, mut status) = match registered_examples() {
-            Ok(examples) => (examples, SharedString::from("Ready")),
+        let (fixtures, mut status) = match registered_fixtures() {
+            Ok(fixtures) => (fixtures, SharedString::from("Ready")),
             Err(error) => (Vec::new(), SharedString::from(error.to_string())),
         };
         let requested_fixture = env::var("HBLANK_INITIAL_FIXTURE").ok();
         let (selected, matched_fixture) = initial_selection(
-            examples.iter().map(|example| {
-                let metadata = example.metadata();
+            fixtures.iter().map(|fixture| {
+                let metadata = fixture.metadata();
                 (metadata.id, metadata.source)
             }),
             persisted.selected.as_deref(),
             requested_fixture.as_deref(),
         );
         if requested_fixture.is_some() && !matched_fixture {
-            status = "Requested fixture contains no registered examples".into();
+            status = "Requested fixture contains no registered fixtures".into();
         }
-        let navigation = examples
+        let navigation = fixtures
             .iter()
-            .map(|example| {
-                let metadata = example.metadata();
+            .map(|fixture| {
+                let metadata = fixture.metadata();
                 NavigationItem {
                     id: metadata.id,
                     title: metadata.title,
@@ -123,10 +123,10 @@ impl HarnessApp {
             .collect::<Vec<_>>();
         let focus_handle = cx.focus_handle();
         focus_handle.focus(window);
-        println!("Hblank harness ready: {} examples", examples.len());
+        println!("Hblank harness ready: {} fixtures", fixtures.len());
 
         let app = Self {
-            examples,
+            fixtures,
             navigation,
             selected,
             filter: if matched_fixture {
@@ -150,23 +150,23 @@ impl HarnessApp {
         app
     }
 
-    fn selected_example(&self) -> Option<&ExampleDefinition> {
-        self.selected.and_then(|index| self.examples.get(index))
+    fn selected_fixture(&self) -> Option<&FixtureDefinition> {
+        self.selected.and_then(|index| self.fixtures.get(index))
     }
 
-    fn selected_example_mut(&mut self) -> Option<&mut ExampleDefinition> {
-        self.selected.and_then(|index| self.examples.get_mut(index))
+    fn selected_fixture_mut(&mut self) -> Option<&mut FixtureDefinition> {
+        self.selected.and_then(|index| self.fixtures.get_mut(index))
     }
 
     fn selected_id(&self) -> Option<&'static str> {
-        self.selected_example().map(|example| example.metadata().id)
+        self.selected_fixture().map(|fixture| fixture.metadata().id)
     }
 
     fn select(&mut self, id: &'static str, cx: &mut Context<Self>) {
         if let Some(index) = self
-            .examples
+            .fixtures
             .iter()
-            .position(|example| example.metadata().id == id)
+            .position(|fixture| fixture.metadata().id == id)
         {
             self.selected = Some(index);
             self.editing = EditingTarget::Search;
@@ -237,8 +237,8 @@ impl HarnessApp {
         match action {
             ControlAction::Set { id, value } => {
                 let result = self
-                    .selected_example_mut()
-                    .expect("a rendered control always has a selected example")
+                    .selected_fixture_mut()
+                    .expect("a rendered control always has a selected fixture")
                     .set_control(id, value.clone());
                 self.status = match result {
                     Ok(()) => SharedString::from("Ready"),
@@ -250,8 +250,8 @@ impl HarnessApp {
                 self.focus_handle.focus(window);
             }
             ControlAction::Reset => {
-                if let Some(example) = self.selected_example_mut() {
-                    example.reset();
+                if let Some(fixture) = self.selected_fixture_mut() {
+                    fixture.reset();
                 }
                 self.editing = EditingTarget::Search;
                 self.status = SharedString::from("Ready");
@@ -316,14 +316,14 @@ impl HarnessApp {
                 self.filter.pop();
             }
             EditingTarget::TextControl(id) => {
-                let Some(example) = self.selected_example_mut() else {
+                let Some(fixture) = self.selected_fixture_mut() else {
                     return;
                 };
-                let Some(ControlValue::Text(mut value)) = example.props().control_value(id) else {
+                let Some(ControlValue::Text(mut value)) = fixture.props().control_value(id) else {
                     return;
                 };
                 value.pop();
-                let _ = example.set_control(id, ControlValue::Text(value));
+                let _ = fixture.set_control(id, ControlValue::Text(value));
             }
         }
     }
@@ -332,14 +332,14 @@ impl HarnessApp {
         match self.editing {
             EditingTarget::Search => self.filter.push_str(text),
             EditingTarget::TextControl(id) => {
-                let Some(example) = self.selected_example_mut() else {
+                let Some(fixture) = self.selected_fixture_mut() else {
                     return;
                 };
-                let Some(ControlValue::Text(mut value)) = example.props().control_value(id) else {
+                let Some(ControlValue::Text(mut value)) = fixture.props().control_value(id) else {
                     return;
                 };
                 value.push_str(text);
-                let _ = example.set_control(id, ControlValue::Text(value));
+                let _ = fixture.set_control(id, ControlValue::Text(value));
             }
         }
     }
@@ -366,14 +366,14 @@ impl HarnessApp {
     ) -> gpui::AnyElement {
         let Some(index) = self.selected else {
             return empty_state(EmptyStateProps {
-                title: "No examples discovered".into(),
-                body: "Add a file matching .hblank/config.toml, annotate a render function with #[hblank::example], and save. It will appear here automatically."
+                title: "No fixtures discovered".into(),
+                body: "Add a file matching .hblank/config.toml, annotate a render function with #[hblank::fixture], and save. It will appear here automatically."
                     .into(),
             })
             .into_any_element();
         };
-        let metadata = *self.examples[index].metadata();
-        let preview = self.examples[index].render(window, cx);
+        let metadata = *self.fixtures[index].metadata();
+        let preview = self.fixtures[index].render(window, cx);
         let toolbar_surface = toolbar(
             ToolbarProps {
                 title: metadata.title.into(),
@@ -385,8 +385,8 @@ impl HarnessApp {
         let inspector = match self.inspector {
             InspectorTab::Controls => controls_panel(
                 ControlsPanelProps {
-                    definitions: self.examples[index].props().definitions(),
-                    props: self.examples[index].props(),
+                    definitions: self.fixtures[index].props().definitions(),
+                    props: self.fixtures[index].props(),
                     editing_text: match self.editing {
                         EditingTarget::TextControl(id) => Some(id),
                         EditingTarget::Search => None,
@@ -464,7 +464,7 @@ impl Render for HarnessApp {
             .text_color(rgb(theme::TEXT))
             .child(header(HeaderProps {
                 project: self.project.clone(),
-                example_count: self.examples.len(),
+                fixture_count: self.fixtures.len(),
                 status: self.status.clone(),
             }))
             .child(

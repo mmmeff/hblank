@@ -11,7 +11,9 @@ use std::{
 use notify::{RecursiveMode, Watcher};
 use thiserror::Error;
 
-use crate::{Config, ConfigError, DiscoveredExample, GenerationError, refresh_generated_examples};
+use crate::{
+    Config, ConfigError, DiscoveredFixtureFile, GenerationError, refresh_generated_fixtures,
+};
 
 const DEBOUNCE: Duration = Duration::from_millis(160);
 const IDLE_POLL: Duration = Duration::from_millis(250);
@@ -53,14 +55,17 @@ pub fn run_dev(options: &DevOptions) -> Result<(), DevError> {
                 source,
             })?;
     let mut config = Config::load(&project_root)?;
-    let initial = refresh_generated_examples(&project_root, &config)?;
+    let initial = refresh_generated_fixtures(&project_root, &config)?;
     let fixture = options
         .fixture
         .as_deref()
-        .map(|path| resolve_initial_fixture(&project_root, path, &initial.examples))
+        .map(|path| resolve_initial_fixture(&project_root, path, &initial.fixture_files))
         .transpose()?;
     let mut fingerprint = source_fingerprint(&project_root)?;
-    println!("Discovered {} Hblank examples", initial.examples.len());
+    println!(
+        "Discovered {} Hblank fixture files",
+        initial.fixture_files.len()
+    );
     if let Some(fixture) = &fixture {
         println!("Opening fixture {}", fixture.display());
     }
@@ -103,7 +108,7 @@ pub fn run_dev(options: &DevOptions) -> Result<(), DevError> {
                     }
                 }
                 match rebuild(&project_root, &config, &mut preview) {
-                    Ok(count) => println!("Reloaded {count} Hblank examples"),
+                    Ok(count) => println!("Reloaded {count} Hblank fixture files"),
                     Err(error) => {
                         eprintln!("Hblank rebuild failed; keeping the current preview: {error}");
                     }
@@ -123,7 +128,7 @@ pub fn run_dev(options: &DevOptions) -> Result<(), DevError> {
 fn resolve_initial_fixture(
     project_root: &Path,
     requested: &Path,
-    discovered: &[DiscoveredExample],
+    fixture_files: &[DiscoveredFixtureFile],
 ) -> Result<PathBuf, DevError> {
     let path = if requested.is_absolute() {
         requested.to_path_buf()
@@ -136,9 +141,9 @@ fn resolve_initial_fixture(
             path: path.clone(),
             source,
         })?;
-    if discovered
+    if fixture_files
         .iter()
-        .any(|example| example.absolute_path == canonical)
+        .any(|fixture_file| fixture_file.absolute_path == canonical)
     {
         Ok(canonical)
     } else {
@@ -151,11 +156,11 @@ fn rebuild(
     config: &Config,
     preview: &mut PreviewProcess,
 ) -> Result<usize, DevError> {
-    let generated = refresh_generated_examples(project_root, config)?;
+    let generated = refresh_generated_fixtures(project_root, config)?;
     build_preview(project_root)?;
     let replacement = spawn_preview(project_root, config, None)?;
     preview.replace(replacement)?;
-    Ok(generated.examples.len())
+    Ok(generated.fixture_files.len())
 }
 
 fn source_fingerprint(project_root: &Path) -> Result<u64, DevError> {
@@ -317,7 +322,7 @@ pub enum DevError {
         path: PathBuf,
         source: std::io::Error,
     },
-    #[error("requested fixture {0} is not matched by the configured example patterns")]
+    #[error("requested fixture {0} is not matched by the configured fixture file patterns")]
     FixtureNotDiscovered(PathBuf),
     #[error("could not scan watched project sources: {0}")]
     FingerprintWalk(walkdir::Error),
@@ -358,7 +363,7 @@ pub enum DevError {
 #[cfg(test)]
 mod tests {
     use super::{DevError, is_relevant_change, resolve_initial_fixture, source_fingerprint};
-    use crate::DiscoveredExample;
+    use crate::DiscoveredFixtureFile;
     use std::{fs, path::Path};
 
     #[test]
@@ -383,7 +388,7 @@ mod tests {
         ));
         assert!(!is_relevant_change(
             root,
-            Path::new("/project/.hblank/generated/examples.rs")
+            Path::new("/project/.hblank/generated/fixtures.rs")
         ));
         assert!(!is_relevant_change(
             root,
@@ -417,7 +422,7 @@ mod tests {
     }
 
     #[test]
-    fn resolves_relative_and_absolute_discovered_fixture_paths() {
+    fn resolves_relative_and_absolute_discovered_fixture_file_paths() {
         let project = tempfile::tempdir().expect("temporary project should be created");
         let project_root = project
             .path()
@@ -427,16 +432,19 @@ mod tests {
         fs::create_dir_all(fixture.parent().expect("fixture has a parent"))
             .expect("fixture directory should be created");
         fs::write(&fixture, "// fixture\n").expect("fixture should be written");
-        let discovered = vec![DiscoveredExample {
+        let fixture_files = vec![DiscoveredFixtureFile {
             relative_path: Path::new("src/card.hblank.rs").to_path_buf(),
             absolute_path: fixture.clone(),
             module_name: "__hblank_card".to_owned(),
         }];
 
-        let relative =
-            resolve_initial_fixture(&project_root, Path::new("src/card.hblank.rs"), &discovered)
-                .expect("relative fixture should resolve");
-        let absolute = resolve_initial_fixture(&project_root, &fixture, &discovered)
+        let relative = resolve_initial_fixture(
+            &project_root,
+            Path::new("src/card.hblank.rs"),
+            &fixture_files,
+        )
+        .expect("relative fixture should resolve");
+        let absolute = resolve_initial_fixture(&project_root, &fixture, &fixture_files)
             .expect("absolute fixture should resolve");
 
         assert_eq!(relative, fixture);

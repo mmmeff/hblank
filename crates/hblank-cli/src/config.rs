@@ -11,7 +11,7 @@ pub const CONFIG_PATH: &str = ".hblank/config.toml";
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Config {
-    pub examples: Vec<String>,
+    pub fixtures: Vec<String>,
     pub ignore: Vec<String>,
     pub window: WindowConfig,
 }
@@ -19,7 +19,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            examples: vec!["src/**/*.hblank.rs".to_owned()],
+            fixtures: vec!["src/**/*.hblank.rs".to_owned()],
             ignore: vec!["target/**".to_owned(), ".hblank/**".to_owned()],
             window: WindowConfig::default(),
         }
@@ -81,8 +81,8 @@ impl Config {
     }
 
     fn validate(&self) -> Result<(), ConfigError> {
-        if self.examples.is_empty() || self.examples.iter().any(String::is_empty) {
-            return Err(ConfigError::NoExamplePatterns);
+        if self.fixtures.is_empty() || self.fixtures.iter().any(String::is_empty) {
+            return Err(ConfigError::NoFixtureFilePatterns);
         }
         if self.window.title.trim().is_empty() {
             return Err(ConfigError::EmptyWindowTitle);
@@ -111,8 +111,8 @@ pub enum ConfigError {
     },
     #[error("could not serialize Hblank config: {0}")]
     Serialize(toml::ser::Error),
-    #[error("Hblank config must include at least one non-empty example pattern")]
-    NoExamplePatterns,
+    #[error("Hblank config must include at least one non-empty fixture file pattern")]
+    NoFixtureFilePatterns,
     #[error("Hblank window title cannot be empty")]
     EmptyWindowTitle,
     #[error("Hblank window size must be positive, received {width}x{height}")]

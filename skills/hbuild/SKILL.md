@@ -35,7 +35,7 @@ hblank --help
 hblank dev --help
 ```
 
-Determine the project root, configured example globs, ignored paths, Hblank dependency source, component interface, and local naming conventions. Do not add a second fixture convention beside an existing one.
+Determine the project root, configured fixture file globs, ignored paths, Hblank dependency source, component interface, and local naming conventions. Do not add a second fixture convention beside an existing one.
 
 **Complete when:** the exact host component, props type, matched fixture path, and verification command are known.
 
@@ -65,7 +65,7 @@ A component accepts presentation data and returns GPUI elements. It must not own
 
 Use application/container modules for state and side effects. Pass values and callbacks into presentational functions.
 
-Props used directly by an example must implement:
+Props used directly by a fixture must implement:
 
 - `Clone`;
 - `Default`;
@@ -83,7 +83,7 @@ Supported automatic controls:
 
 Put user-facing explanations in field doc comments. If production props contain unsupported or stateful fields, define a fixture-only presentation props type from supported fields and map it into the production props. Do not weaken the production model for the harness.
 
-Read [references/component-examples.md](references/component-examples.md) before creating a new component or fixture.
+Read [references/component-fixtures.md](references/component-fixtures.md) before creating a new component or fixture.
 
 **Complete when:** changing each derived value produces a valid production component render without hidden state.
 
@@ -94,13 +94,13 @@ Create a source file matched by `.hblank/config.toml`; the default is `src/**/*.
 A registered function has exactly this shape:
 
 ```rust
-#[hblank::example(
+#[hblank::fixture(
     id = "components.badge",
     title = "Badge",
     group = "Components"
 )]
 /// Documentation shown automatically in the Hblank Docs panel.
-fn badge_example(
+fn badge_fixture(
     props: &BadgeProps,
     window: &mut Window,
     cx: &mut App,
@@ -113,10 +113,10 @@ Rules:
 
 - import host types through `hblank_project` inside fixture files;
 - keep `id` globally unique and stable;
-- use `example` or `fixture`, not “story,” in project terminology;
+- use `fixture` or `fixture`, not “story,” in project terminology;
 - use function Rustdoc for the Docs panel and field Rustdoc for control help;
 - multiple registrations per file are supported and sorted by group, title, then id;
-- never edit `.hblank/generated/examples.rs` manually.
+- never edit `.hblank/generated/fixtures.rs` manually.
 
 **Complete when:** discovery imports the file and the registry contains its expected id, title, group, docs, and controls.
 
@@ -134,7 +134,7 @@ With a separate project root:
 hblank dev --project crates/ui --fixture src/badge.hblank.rs
 ```
 
-Relative fixture paths resolve from `--project`; absolute paths also work. The file must match configured discovery. If it contains multiple examples, the first in deterministic navigation order opens.
+Relative fixture paths resolve from `--project`; absolute paths also work. The file must match configured discovery. If it contains multiple fixtures, the first in deterministic navigation order opens.
 
 Keep `hblank dev` running while editing. A successful build replaces the preview automatically and preserves the user's latest selection. A failed build leaves the last successful preview open; fix the compiler error rather than restarting repeatedly.
 
@@ -177,10 +177,10 @@ Also run the narrow command that builds the changed preview and exercise the fix
 - Never use unsafe dynamic-library loading for reload; Hblank uses supervised Rust rebuilds.
 - Never claim hot reload from compilation alone; observe the updated GPUI render.
 - Never replace persisted selection on every reload; `--fixture` controls initial launch only.
-- Preserve existing project fixture patterns and terminology.
+- Preserve existing project fixture file patterns and terminology.
 
 ## Reference routing
 
 - Read [references/framework.md](references/framework.md) when changing configuration, discovery, macros, registration, preview startup, or hot reload.
-- Read [references/component-examples.md](references/component-examples.md) when creating props, enums, components, fixture adapters, or example functions.
+- Read [references/component-fixtures.md](references/component-fixtures.md) when creating props, enums, components, fixture adapters, or fixture functions.
 - Read [references/troubleshooting.md](references/troubleshooting.md) when discovery, compilation, controls, docs, direct fixture launch, or reload fails.

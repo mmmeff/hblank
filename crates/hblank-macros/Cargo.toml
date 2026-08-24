@@ -1,6 +1,6 @@
 [package]
 name = "hblank-macros"
-description = "Macros for Hblank component examples"
+description = "Macros for Hblank component fixtures"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

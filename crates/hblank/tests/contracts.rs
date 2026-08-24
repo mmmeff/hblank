@@ -1,6 +1,6 @@
 use hblank::gpui::{App, IntoElement, ParentElement, Window, div};
 use hblank::{
-    ControlError, ControlKind, ControlValue, HblankEnum, HblankProps, example, registered_examples,
+    ControlError, ControlKind, ControlValue, HblankEnum, HblankProps, fixture, registered_fixtures,
 };
 
 #[derive(Clone, Default, HblankEnum)]
@@ -23,7 +23,7 @@ struct DemoProps {
     tone: Tone,
 }
 
-#[example(id = "tests.demo", title = "Demo", group = "Tests")]
+#[fixture(id = "tests.demo", title = "Demo", group = "Tests")]
 /// A presentational component used to verify generated documentation.
 fn demo(props: &DemoProps, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
     div().child(props.label.clone())
@@ -55,49 +55,49 @@ fn derives_control_metadata_and_values() {
 
 #[test]
 fn mutates_every_supported_control_type_and_resets() {
-    let mut example = registered_examples()
+    let mut fixture = registered_fixtures()
         .expect("registry should be valid")
         .into_iter()
-        .find(|example| example.metadata().id == "tests.demo")
-        .expect("test example should be registered");
+        .find(|fixture| fixture.metadata().id == "tests.demo")
+        .expect("test fixture should be registered");
 
-    example
+    fixture
         .set_control("emphasized", ControlValue::Boolean(true))
         .expect("boolean control should update");
-    example
+    fixture
         .set_control("label", ControlValue::Text("Changed".to_owned()))
         .expect("text control should update");
-    example
+    fixture
         .set_control("count", ControlValue::Number(3.0))
         .expect("numeric control should update");
-    example
+    fixture
         .set_control("tone", ControlValue::Enum("High contrast".to_owned()))
         .expect("enum control should update");
 
     assert_eq!(
-        example.props().control_value("emphasized"),
+        fixture.props().control_value("emphasized"),
         Some(ControlValue::Boolean(true))
     );
     assert_eq!(
-        example.props().control_value("label"),
+        fixture.props().control_value("label"),
         Some(ControlValue::Text("Changed".to_owned()))
     );
     assert_eq!(
-        example.props().control_value("count"),
+        fixture.props().control_value("count"),
         Some(ControlValue::Number(3.0))
     );
     assert_eq!(
-        example.props().control_value("tone"),
+        fixture.props().control_value("tone"),
         Some(ControlValue::Enum("High contrast".to_owned()))
     );
 
-    example.reset();
+    fixture.reset();
     assert_eq!(
-        example.props().control_value("emphasized"),
+        fixture.props().control_value("emphasized"),
         Some(ControlValue::Boolean(false))
     );
     assert_eq!(
-        example.props().control_value("label"),
+        fixture.props().control_value("label"),
         Some(ControlValue::Text(String::new()))
     );
 }
@@ -127,19 +127,19 @@ fn rejects_invalid_control_updates() {
 }
 
 #[test]
-fn captures_example_rustdoc_and_source_metadata() {
-    let examples = registered_examples().expect("registry should be valid");
-    let example = examples
+fn captures_fixture_rustdoc_and_source_metadata() {
+    let fixtures = registered_fixtures().expect("registry should be valid");
+    let fixture = fixtures
         .iter()
-        .find(|example| example.metadata().id == "tests.demo")
-        .expect("test example should be registered");
+        .find(|fixture| fixture.metadata().id == "tests.demo")
+        .expect("test fixture should be registered");
 
-    assert_eq!(example.metadata().title, "Demo");
-    assert_eq!(example.metadata().group, "Tests");
+    assert_eq!(fixture.metadata().title, "Demo");
+    assert_eq!(fixture.metadata().group, "Tests");
     assert_eq!(
-        example.metadata().docs,
+        fixture.metadata().docs,
         "A presentational component used to verify generated documentation."
     );
-    assert!(example.metadata().source.ends_with("tests/contracts.rs"));
-    assert!(example.metadata().line > 0);
+    assert!(fixture.metadata().source.ends_with("tests/contracts.rs"));
+    assert!(fixture.metadata().line > 0);
 }

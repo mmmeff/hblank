@@ -7,23 +7,23 @@ use walkdir::WalkDir;
 use crate::Config;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct DiscoveredExample {
+pub struct DiscoveredFixtureFile {
     pub relative_path: PathBuf,
     pub absolute_path: PathBuf,
     pub module_name: String,
 }
 
-/// Finds configured example files in deterministic relative-path order.
+/// Finds configured fixture files in deterministic relative-path order.
 ///
 /// # Errors
 /// Returns an error for invalid globs, unreadable directory entries, or non-UTF-8 paths.
-pub fn discover_examples(
+pub fn discover_fixture_files(
     project_root: &Path,
     config: &Config,
-) -> Result<Vec<DiscoveredExample>, DiscoveryError> {
-    let include = build_glob_set(&config.examples)?;
+) -> Result<Vec<DiscoveredFixtureFile>, DiscoveryError> {
+    let include = build_glob_set(&config.fixtures)?;
     let ignore = build_glob_set(&config.ignore)?;
-    let mut examples = Vec::new();
+    let mut fixture_files = Vec::new();
 
     for entry in WalkDir::new(project_root).follow_links(false) {
         let entry = entry.map_err(DiscoveryError::Walk)?;
@@ -37,7 +37,7 @@ pub fn discover_examples(
             .to_path_buf();
         let relative = portable_path(&relative_path)?;
         if include.is_match(&relative) && !ignore.is_match(&relative) {
-            examples.push(DiscoveredExample {
+            fixture_files.push(DiscoveredFixtureFile {
                 module_name: module_name(&relative),
                 relative_path,
                 absolute_path,
@@ -45,8 +45,8 @@ pub fn discover_examples(
         }
     }
 
-    examples.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
-    Ok(examples)
+    fixture_files.sort_by(|left, right| left.relative_path.cmp(&right.relative_path));
+    Ok(fixture_files)
 }
 
 fn build_glob_set(patterns: &[String]) -> Result<GlobSet, DiscoveryError> {
@@ -100,12 +100,12 @@ const fn stable_hash(bytes: &[u8]) -> u64 {
 
 #[derive(Debug, Error)]
 pub enum DiscoveryError {
-    #[error("invalid example glob '{pattern}': {source}")]
+    #[error("invalid fixture file glob '{pattern}': {source}")]
     Glob {
         pattern: String,
         source: globset::Error,
     },
-    #[error("could not build example glob matcher: {0}")]
+    #[error("could not build fixture file glob matcher: {0}")]
     GlobSet(globset::Error),
     #[error("could not walk project files: {0}")]
     Walk(walkdir::Error),

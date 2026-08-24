@@ -1,19 +1,19 @@
 //! Isolated GPUI component development.
 
 mod control;
-mod example;
+mod fixture;
 pub mod harness;
 
 pub use control::{
     ControlDefinition, ControlError, ControlKind, ControlValue, HblankEnum, HblankProps,
 };
-pub use example::{
-    ExampleDefinition, ExampleMetadata, ExampleRegistration, RegistryError, RenderExample,
-    registered_examples,
+pub use fixture::{
+    FixtureDefinition, FixtureMetadata, FixtureRegistration, RegistryError, RenderFixture,
+    registered_fixtures,
 };
 pub use gpui;
 pub use harness::run_harness;
-pub use hblank_macros::{HblankEnum, HblankProps, example};
+pub use hblank_macros::{HblankEnum, HblankProps, fixture};
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 

@@ -1,5 +1,5 @@
-mod examples {
-    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/generated/examples.rs"));
+mod fixtures {
+    include!(concat!(env!("CARGO_MANIFEST_DIR"), "/generated/fixtures.rs"));
 }
 
 fn main() {

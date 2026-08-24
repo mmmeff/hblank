@@ -18,8 +18,8 @@ fn noop<T: 'static>() -> UiHandler<T> {
 struct HeaderFixtureProps {
     /// Project label shown next to the Hblank mark.
     project: String,
-    /// Number of discovered examples.
-    example_count: u32,
+    /// Number of discovered fixtures.
+    fixture_count: u32,
     /// Build and reload status.
     status: String,
 }
@@ -28,22 +28,22 @@ impl Default for HeaderFixtureProps {
     fn default() -> Self {
         Self {
             project: "hblank-dogfood · Hblank".to_owned(),
-            example_count: 9,
+            fixture_count: 9,
             status: "Ready".to_owned(),
         }
     }
 }
 
-#[hblank::example(id = "hblank.header", title = "Header", group = "Hblank UI")]
-/// Hblank's compact project identity, example count, and live build status surface.
-fn header_example(
+#[hblank::fixture(id = "hblank.header", title = "Header", group = "Hblank UI")]
+/// Hblank's compact project identity, fixture count, and live build status surface.
+fn header_fixture(
     props: &HeaderFixtureProps,
     _window: &mut Window,
     _cx: &mut App,
 ) -> impl IntoElement {
     header(HeaderProps {
         project: props.project.clone().into(),
-        example_count: props.example_count as usize,
+        fixture_count: props.fixture_count as usize,
         status: props.status.clone().into(),
     })
 }
@@ -65,9 +65,9 @@ impl Default for SearchFixtureProps {
     }
 }
 
-#[hblank::example(id = "hblank.search", title = "Search", group = "Hblank UI")]
-/// The keyboard-focused example filter used above the navigation tree.
-fn search_example(
+#[hblank::fixture(id = "hblank.search", title = "Search", group = "Hblank UI")]
+/// The keyboard-focused fixture filter used above the navigation tree.
+fn search_fixture(
     props: &SearchFixtureProps,
     _window: &mut Window,
     _cx: &mut App,
@@ -83,7 +83,7 @@ fn search_example(
 
 #[derive(Clone, Debug, HblankProps)]
 struct NavigationFixtureProps {
-    /// Query applied to groups and example titles.
+    /// Query applied to groups and fixture titles.
     query: String,
 }
 
@@ -95,9 +95,9 @@ impl Default for NavigationFixtureProps {
     }
 }
 
-#[hblank::example(id = "hblank.navigation", title = "Navigation", group = "Hblank UI")]
-/// Grouped, filterable navigation for jumping between isolated component examples.
-fn navigation_example(
+#[hblank::fixture(id = "hblank.navigation", title = "Navigation", group = "Hblank UI")]
+/// Grouped, filterable navigation for jumping between isolated component fixtures.
+fn navigation_fixture(
     props: &NavigationFixtureProps,
     _window: &mut Window,
     _cx: &mut App,
@@ -139,7 +139,7 @@ enum FixtureTab {
 
 #[derive(Clone, Debug, HblankProps)]
 struct ToolbarFixtureProps {
-    /// Selected example title.
+    /// Selected fixture title.
     title: String,
     /// Inspector tab shown as active.
     tab: FixtureTab,
@@ -154,9 +154,9 @@ impl Default for ToolbarFixtureProps {
     }
 }
 
-#[hblank::example(id = "hblank.toolbar", title = "Toolbar", group = "Hblank UI")]
-/// Selected-example context and inspector tab switcher.
-fn toolbar_example(
+#[hblank::fixture(id = "hblank.toolbar", title = "Toolbar", group = "Hblank UI")]
+/// Selected-fixture context and inspector tab switcher.
+fn toolbar_fixture(
     props: &ToolbarFixtureProps,
     _window: &mut Window,
     _cx: &mut App,
@@ -188,9 +188,9 @@ impl Default for CanvasFixtureProps {
     }
 }
 
-#[hblank::example(id = "hblank.canvas", title = "Canvas", group = "Hblank UI")]
-/// The centered, scrollable surface that contains exactly one rendered example.
-fn canvas_example(
+#[hblank::fixture(id = "hblank.canvas", title = "Canvas", group = "Hblank UI")]
+/// The centered, scrollable surface that contains exactly one rendered fixture.
+fn canvas_fixture(
     props: &CanvasFixtureProps,
     _window: &mut Window,
     _cx: &mut App,
@@ -208,7 +208,7 @@ fn canvas_example(
             .rounded_md()
             .bg(rgb(0x7357d8))
             .text_color(rgb(0xffffff))
-            .child("Live example")
+            .child("Live fixture")
             .into_any_element(),
     )
 }
@@ -243,13 +243,13 @@ impl Default for ControlsFixtureProps {
     }
 }
 
-#[hblank::example(
+#[hblank::fixture(
     id = "hblank.controls-panel",
     title = "Controls panel",
     group = "Hblank UI"
 )]
 /// Automatically generated property controls, including field-level Rustdoc.
-fn controls_example(
+fn controls_fixture(
     props: &ControlsFixtureProps,
     _window: &mut Window,
     _cx: &mut App,
@@ -282,9 +282,9 @@ impl Default for DocsFixtureProps {
     }
 }
 
-#[hblank::example(id = "hblank.docs-panel", title = "Docs panel", group = "Hblank UI")]
+#[hblank::fixture(id = "hblank.docs-panel", title = "Docs panel", group = "Hblank UI")]
 /// Rustdoc rendered beside the isolated component without duplicate documentation files.
-fn docs_example(props: &DocsFixtureProps, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+fn docs_fixture(props: &DocsFixtureProps, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
     docs_panel(DocsPanelProps {
         title: props.title.clone().into(),
         docs: props.docs.clone().into(),
@@ -303,16 +303,16 @@ struct EmptyFixtureProps {
 impl Default for EmptyFixtureProps {
     fn default() -> Self {
         Self {
-            title: "No examples discovered".to_owned(),
+            title: "No fixtures discovered".to_owned(),
             body: "Add a matching .hblank.rs file and save; Hblank will discover it automatically."
                 .to_owned(),
         }
     }
 }
 
-#[hblank::example(id = "hblank.empty-state", title = "Empty state", group = "Hblank UI")]
-/// Actionable first-run guidance shown when no configured examples are linked.
-fn empty_state_example(
+#[hblank::fixture(id = "hblank.empty-state", title = "Empty state", group = "Hblank UI")]
+/// Actionable first-run guidance shown when no configured fixtures are linked.
+fn empty_state_fixture(
     props: &EmptyFixtureProps,
     _window: &mut Window,
     _cx: &mut App,

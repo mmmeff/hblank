@@ -24,7 +24,7 @@ Always confirm these with the checked-out repository; use code truth if a later 
 ├── config.toml
 ├── Cargo.toml
 ├── src/main.rs
-├── generated/examples.rs
+├── generated/fixtures.rs
 └── target/
 ```
 
@@ -35,7 +35,7 @@ The host package remains the source of production components. The preview crate 
 Configuration is project-root-relative:
 
 ```toml
-examples = ["src/**/*.hblank.rs"]
+fixtures = ["src/**/*.hblank.rs"]
 ignore = ["target/**", ".hblank/**"]
 
 [window]
@@ -50,7 +50,7 @@ The CLI walks files without following symlinks, normalizes paths, applies includ
 
 ## Registration
 
-`#[hblank::example]` keeps the render function and emits an inventory registration. The generated builder:
+`#[hblank::fixture]` keeps the render function and emits an inventory registration. The generated builder:
 
 1. creates `Props::default()`;
 2. captures id, title, group, function Rustdoc, source, and line;
@@ -69,7 +69,7 @@ Numeric values pass through `f64` in the control model. Integer updates reject n
 
 ## Harness state
 
-The GPUI harness owns selection, filtering, active inspector tab, editing target, and mutable example props. Presentational harness functions live separately under `hblank::harness`.
+The GPUI harness owns selection, filtering, active inspector tab, editing target, and mutable fixture props. Presentational harness functions live separately under `hblank::harness`.
 
 Selection and filter persist in `.hblank/state.toml`. `hblank dev --fixture PATH` passes `HBLANK_INITIAL_FIXTURE` only to the first preview process. The harness gives that source path priority, clears an excluding filter, persists the resulting id, and then lets later reloads restore normal user state.
 

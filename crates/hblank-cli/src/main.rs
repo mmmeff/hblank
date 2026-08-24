@@ -11,7 +11,7 @@ use hblank_cli::{DevOptions, InitOptions, initialize, run_dev};
     after_long_help = "OPEN A FIXTURE DIRECTLY:
   hblank dev --fixture src/button.hblank.rs
 
-Run 'hblank dev --help' for relative-path rules and more examples."
+Run 'hblank dev --help' for relative-path rules and complete usage details."
 )]
 struct Cli {
     #[command(subcommand)]
@@ -31,13 +31,13 @@ enum Command {
     },
     /// Launch the GPUI harness, optionally opening one fixture source file directly.
     #[command(
-        long_about = "Launch the GPUI component development harness and watch for changes. Pass --fixture to select an example by its source-file path on the initial launch.",
+        long_about = "Launch the GPUI component development harness and watch for changes. Pass --fixture to select a fixture by its source-file path on the initial launch.",
         after_long_help = "PATH RULES:
   Relative fixture paths are resolved from --project. Absolute paths are accepted.
-  The file must match the example patterns in .hblank/config.toml.
-  If a file registers multiple examples, the first in navigation order opens.
+  The file must match the fixture file patterns in .hblank/config.toml.
+  If a file registers multiple fixtures, the first in navigation order opens.
 
-EXAMPLES:
+USAGE:
   hblank dev --fixture src/button.hblank.rs
   hblank dev --project crates/ui --fixture src/card.hblank.rs
   hblank dev --fixture /absolute/path/to/src/badge.hblank.rs"
@@ -46,7 +46,7 @@ EXAMPLES:
         /// Initialized Rust package root to develop.
         #[arg(long, default_value = ".")]
         project: PathBuf,
-        /// Open directly to the first registered example in this fixture source file.
+        /// Open directly to the first registered fixture in this fixture source file.
         ///
         /// Relative paths are resolved from --project; absolute paths are also accepted.
         #[arg(long, value_name = "PATH")]
@@ -110,7 +110,7 @@ mod tests {
 
         assert!(help.contains("--fixture <PATH>"));
         assert!(help.contains("Relative fixture paths are resolved from --project"));
-        assert!(help.contains("If a file registers multiple examples"));
+        assert!(help.contains("If a file registers multiple fixtures"));
         assert!(help.contains("hblank dev --project crates/ui --fixture src/card.hblank.rs"));
     }
 }

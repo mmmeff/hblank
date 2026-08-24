@@ -3,7 +3,7 @@ use hblank::gpui::{App, IntoElement, Window, div, prelude::*, px, rgb};
 
 #[derive(Clone, Debug, HblankProps)]
 struct LiveDiscoveryProps {
-    /// Message displayed by the newly discovered example.
+    /// Message displayed by the newly discovered fixture.
     message: String,
 }
 
@@ -15,13 +15,13 @@ impl Default for LiveDiscoveryProps {
     }
 }
 
-#[hblank::example(
+#[hblank::fixture(
     id = "dogfood.live-discovery",
     title = "Live discovery",
     group = "Dogfood"
 )]
 /// A fixture added while the development harness is running to verify glob discovery and automatic preview replacement.
-fn live_discovery_example(
+fn live_discovery_fixture(
     props: &LiveDiscoveryProps,
     _window: &mut Window,
     _cx: &mut App,

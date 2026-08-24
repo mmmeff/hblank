@@ -6,9 +6,9 @@ mod init;
 
 pub use config::{CONFIG_PATH, Config, ConfigError, WindowConfig};
 pub use dev::{DevError, DevOptions, run_dev};
-pub use discovery::{DiscoveredExample, DiscoveryError, discover_examples};
+pub use discovery::{DiscoveredFixtureFile, DiscoveryError, discover_fixture_files};
 pub use generate::{
-    GENERATED_EXAMPLES_PATH, GenerationError, GenerationResult, generated_source,
-    refresh_generated_examples,
+    GENERATED_FIXTURES_PATH, GenerationError, GenerationResult, generated_source,
+    refresh_generated_fixtures,
 };
 pub use init::{InitError, InitOptions, InitReport, initialize};

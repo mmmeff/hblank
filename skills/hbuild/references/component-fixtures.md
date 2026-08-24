@@ -73,13 +73,13 @@ The matched fixture file:
 use hblank::gpui::{App, IntoElement, Window};
 use hblank_project::{BadgeProps, badge};
 
-#[hblank::example(
+#[hblank::fixture(
     id = "components.badge",
     title = "Badge",
     group = "Components"
 )]
 /// A compact semantic status badge shown in isolation.
-fn badge_example(
+fn badge_fixture(
     props: &BadgeProps,
     window: &mut Window,
     cx: &mut App,
@@ -114,13 +114,13 @@ impl Default for AccountCardFixtureProps {
     }
 }
 
-#[hblank::example(
+#[hblank::fixture(
     id = "components.account-card",
     title = "Account card",
     group = "Components"
 )]
 /// Account identity presentation without application state or network data.
-fn account_card_example(
+fn account_card_fixture(
     props: &AccountCardFixtureProps,
     window: &mut Window,
     cx: &mut App,

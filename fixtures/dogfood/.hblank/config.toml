@@ -1,4 +1,4 @@
-examples = ["src/**/*.hblank.rs"]
+fixtures = ["src/**/*.hblank.rs"]
 ignore = [
     "target/**",
     ".hblank/**",

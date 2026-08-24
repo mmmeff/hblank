@@ -5,10 +5,10 @@ use thiserror::Error;
 
 use crate::{ControlError, ControlValue, HblankProps};
 
-pub type RenderExample = fn(&dyn HblankProps, &mut Window, &mut App) -> AnyElement;
+pub type RenderFixture = fn(&dyn HblankProps, &mut Window, &mut App) -> AnyElement;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct ExampleMetadata {
+pub struct FixtureMetadata {
     pub id: &'static str,
     pub title: &'static str,
     pub group: &'static str,
@@ -17,19 +17,19 @@ pub struct ExampleMetadata {
     pub line: u32,
 }
 
-pub struct ExampleDefinition {
-    metadata: ExampleMetadata,
+pub struct FixtureDefinition {
+    metadata: FixtureMetadata,
     defaults: Box<dyn HblankProps>,
     props: Box<dyn HblankProps>,
-    render: RenderExample,
+    render: RenderFixture,
 }
 
-impl ExampleDefinition {
+impl FixtureDefinition {
     #[must_use]
     pub fn new(
-        metadata: ExampleMetadata,
+        metadata: FixtureMetadata,
         props: Box<dyn HblankProps>,
-        render: RenderExample,
+        render: RenderFixture,
     ) -> Self {
         Self {
             metadata,
@@ -40,7 +40,7 @@ impl ExampleDefinition {
     }
 
     #[must_use]
-    pub const fn metadata(&self) -> &ExampleMetadata {
+    pub const fn metadata(&self) -> &FixtureMetadata {
         &self.metadata
     }
 
@@ -52,7 +52,7 @@ impl ExampleDefinition {
     /// Replaces one generated property control value.
     ///
     /// # Errors
-    /// Returns an error when the identifier or value is invalid for this example's props.
+    /// Returns an error when the identifier or value is invalid for this fixture's props.
     pub fn set_control(&mut self, id: &str, value: ControlValue) -> Result<(), ControlError> {
         self.props.set_control(id, value)
     }
@@ -66,37 +66,37 @@ impl ExampleDefinition {
     }
 }
 
-pub struct ExampleRegistration {
-    pub build: fn() -> ExampleDefinition,
+pub struct FixtureRegistration {
+    pub build: fn() -> FixtureDefinition,
 }
 
-inventory::collect!(ExampleRegistration);
+inventory::collect!(FixtureRegistration);
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum RegistryError {
-    #[error("multiple examples use the id '{0}'")]
+    #[error("multiple fixtures use the id '{0}'")]
     DuplicateId(&'static str),
 }
 
-/// Builds all linked examples in deterministic group/title/id order.
+/// Builds all linked fixtures in deterministic group/title/id order.
 ///
 /// # Errors
-/// Returns an error when multiple linked examples declare the same stable identifier.
-pub fn registered_examples() -> Result<Vec<ExampleDefinition>, RegistryError> {
-    let mut examples = inventory::iter::<ExampleRegistration>
+/// Returns an error when multiple linked fixtures declare the same stable identifier.
+pub fn registered_fixtures() -> Result<Vec<FixtureDefinition>, RegistryError> {
+    let mut fixtures = inventory::iter::<FixtureRegistration>
         .into_iter()
         .map(|registration| (registration.build)())
         .collect::<Vec<_>>();
-    examples.sort_by_key(|example| {
-        let metadata = example.metadata();
+    fixtures.sort_by_key(|fixture| {
+        let metadata = fixture.metadata();
         (metadata.group, metadata.title, metadata.id)
     });
 
-    let mut ids = HashSet::with_capacity(examples.len());
-    for example in &examples {
-        if !ids.insert(example.metadata.id) {
-            return Err(RegistryError::DuplicateId(example.metadata.id));
+    let mut ids = HashSet::with_capacity(fixtures.len());
+    for fixture in &fixtures {
+        if !ids.insert(fixture.metadata.id) {
+            return Err(RegistryError::DuplicateId(fixture.metadata.id));
         }
     }
-    Ok(examples)
+    Ok(fixtures)
 }

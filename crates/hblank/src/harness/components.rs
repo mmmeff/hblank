@@ -50,7 +50,7 @@ pub enum InspectorTab {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HeaderProps {
     pub project: SharedString,
-    pub example_count: usize,
+    pub fixture_count: usize,
     pub status: SharedString,
 }
 
@@ -120,9 +120,9 @@ pub fn header(props: HeaderProps) -> Div {
                         .py_1()
                         .text_color(rgb(theme::SIDEBAR_TEXT))
                         .child(format!(
-                            "{} example{}",
-                            props.example_count,
-                            if props.example_count == 1 { "" } else { "s" }
+                            "{} fixture{}",
+                            props.fixture_count,
+                            if props.fixture_count == 1 { "" } else { "s" }
                         )),
                 )
                 .child(
@@ -193,7 +193,7 @@ pub fn search(props: SearchProps, on_focus: UiHandler<SearchAction>) -> impl Int
         .active(|this| this.bg(rgb(theme::SIDEBAR_HOVER)))
         .on_click(move |_, window, cx| on_focus(&SearchAction, window, cx))
         .child(if empty {
-            SharedString::from("Filter examples…")
+            SharedString::from("Filter fixtures…")
         } else {
             props.query
         })
@@ -262,7 +262,7 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
                 .bg(rgb(theme::CHROME_RAISED))
                 .text_sm()
                 .text_color(rgb(theme::SIDEBAR_TEXT_MUTED))
-                .child("No matching examples")
+                .child("No matching fixtures")
                 .into_any_element(),
         );
     }
@@ -986,7 +986,7 @@ pub fn docs_panel(props: DocsPanelProps) -> Div {
                         .child(if has_docs {
                             props.docs
                         } else {
-                            SharedString::from("Add Rust doc comments above the #[hblank::example] function to document this example.")
+                            SharedString::from("Add Rust doc comments above the #[hblank::fixture] function to document this fixture.")
                         }),
                 )
                 .child(
