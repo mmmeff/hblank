@@ -7,7 +7,7 @@
 [![Rust 1.85+](https://img.shields.io/badge/Rust-1.85%2B-202124?style=flat-square&logo=rust)](https://www.rust-lang.org/)
 [![GPUI 0.2.2](https://img.shields.io/badge/GPUI-0.2.2-7357d8?style=flat-square)](https://gpui.rs/)
 [![Status: pre-1.0](https://img.shields.io/badge/status-pre--1.0-258b63?style=flat-square)](#project-status)
-<p><a href="docs/README.md">Documentation</a></p>
+<p><a href="docs/README.md">docs</a></p>
 
 </div>
 
