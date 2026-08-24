@@ -229,6 +229,7 @@ While it runs:
 - a successful build automatically replaces the preview process and restores the selected example;
 - a failed build leaves the last successful harness open and prints the compiler failure;
 - `↑` and `↓` move through filtered examples, and `Esc` clears the filter.
+- `Cmd` + `=` or `+` zooms in and `Cmd` + `-` zooms out (`Super` on Linux, `Win` on Windows).
 
 Hot reload is a safe supervised Rust rebuild, not unstable dynamic-library ABI loading.
 

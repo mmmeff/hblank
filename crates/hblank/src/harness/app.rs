@@ -7,8 +7,8 @@ use std::{
 };
 
 use gpui::{
-    App, Application, Bounds, Context, FocusHandle, IntoElement, KeyDownEvent, Render,
-    SharedString, Window, WindowBounds, WindowOptions, div, prelude::*, px, rgb, size,
+    App, Application, Bounds, Context, FocusHandle, IntoElement, KeyDownEvent, Modifiers, Render,
+    SharedString, Window, WindowBounds, WindowOptions, div, prelude::*, px, rems, rgb, size,
 };
 use serde::{Deserialize, Serialize};
 
@@ -23,6 +23,11 @@ use super::components::{
 
 const DEFAULT_WIDTH: f32 = 1440.0;
 const DEFAULT_HEIGHT: f32 = 900.0;
+const BASE_REM_SIZE: f32 = 16.0;
+const DEFAULT_UI_SCALE: f32 = 1.0;
+const UI_SCALE_STEP: f32 = 0.1;
+const MIN_UI_SCALE: f32 = 0.5;
+const MAX_UI_SCALE: f32 = 2.0;
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(default)]
@@ -44,6 +49,7 @@ struct HarnessApp {
     filter: String,
     inspector: InspectorTab,
     editing: EditingTarget,
+    ui_scale: f32,
     focus_handle: FocusHandle,
     project: SharedString,
     status: SharedString,
@@ -67,6 +73,21 @@ fn initial_selection<'a>(
         }
     }
     (persisted.or(first), false)
+}
+
+fn ui_scale_delta(key: &str, modifiers: Modifiers) -> Option<f32> {
+    if !modifiers.platform || modifiers.control || modifiers.alt || modifiers.function {
+        return None;
+    }
+    match key {
+        "=" | "+" => Some(UI_SCALE_STEP),
+        "-" => Some(-UI_SCALE_STEP),
+        _ => None,
+    }
+}
+
+fn bounded_ui_scale(current: f32, delta: f32) -> f32 {
+    (current + delta).clamp(MIN_UI_SCALE, MAX_UI_SCALE)
 }
 
 impl HarnessApp {
@@ -115,6 +136,7 @@ impl HarnessApp {
             },
             inspector: InspectorTab::Controls,
             editing: EditingTarget::Search,
+            ui_scale: DEFAULT_UI_SCALE,
             focus_handle,
             project: env::var("HBLANK_WINDOW_TITLE")
                 .unwrap_or_else(|_| "GPUI project · Hblank".to_owned())
@@ -238,7 +260,22 @@ impl HarnessApp {
         cx.notify();
     }
 
+    fn adjust_ui_scale(&mut self, delta: f32, cx: &mut Context<Self>) {
+        let next = bounded_ui_scale(self.ui_scale, delta);
+        if (next - self.ui_scale).abs() < f32::EPSILON {
+            return;
+        }
+        self.ui_scale = next;
+        cx.notify();
+    }
+
     fn on_key_down(&mut self, event: &KeyDownEvent, _window: &mut Window, cx: &mut Context<Self>) {
+        if let Some(delta) = ui_scale_delta(event.keystroke.key.as_str(), event.keystroke.modifiers)
+        {
+            self.adjust_ui_scale(delta, cx);
+            return;
+        }
+
         match event.keystroke.key.as_str() {
             "up" => {
                 self.navigate_filtered(-1, cx);
@@ -391,6 +428,7 @@ impl HarnessApp {
 
 impl Render for HarnessApp {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        window.set_rem_size(px(BASE_REM_SIZE * self.ui_scale));
         let navigation_handler: UiHandler<NavigationAction> =
             Rc::new(cx.listener(Self::on_navigation));
         let search_handler: UiHandler<SearchAction> = Rc::new(cx.listener(Self::on_search_focus));
@@ -436,7 +474,7 @@ impl Render for HarnessApp {
                     .flex()
                     .child(
                         div()
-                            .w(px(272.0))
+                            .w(rems(17.0))
                             .h_full()
                             .flex_none()
                             .flex()
@@ -514,7 +552,12 @@ fn env_dimension(name: &str, fallback: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{PersistedState, env_dimension, initial_selection};
+    use gpui::Modifiers;
+
+    use super::{
+        MAX_UI_SCALE, MIN_UI_SCALE, PersistedState, UI_SCALE_STEP, bounded_ui_scale, env_dimension,
+        initial_selection, ui_scale_delta,
+    };
 
     #[test]
     fn persisted_state_round_trips() {
@@ -566,5 +609,43 @@ mod tests {
         );
 
         assert_eq!(selection, (Some(1), false));
+    }
+
+    #[test]
+    fn platform_zoom_shortcuts_map_plus_equals_and_minus() {
+        let command = Modifiers::command();
+        let shifted_command = Modifiers {
+            shift: true,
+            ..command
+        };
+
+        assert_eq!(ui_scale_delta("=", command), Some(UI_SCALE_STEP));
+        assert_eq!(ui_scale_delta("+", shifted_command), Some(UI_SCALE_STEP));
+        assert_eq!(ui_scale_delta("-", command), Some(-UI_SCALE_STEP));
+        assert_eq!(ui_scale_delta("=", Modifiers::default()), None);
+        assert_eq!(
+            ui_scale_delta(
+                "=",
+                Modifiers {
+                    alt: true,
+                    ..command
+                }
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn ui_scale_stays_within_supported_bounds() {
+        let mut scale = 1.0;
+        for _ in 0..20 {
+            scale = bounded_ui_scale(scale, UI_SCALE_STEP);
+        }
+        assert!((scale - MAX_UI_SCALE).abs() < f32::EPSILON);
+
+        for _ in 0..30 {
+            scale = bounded_ui_scale(scale, -UI_SCALE_STEP);
+        }
+        assert!((scale - MIN_UI_SCALE).abs() < f32::EPSILON);
     }
 }

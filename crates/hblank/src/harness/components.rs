@@ -2,7 +2,9 @@
 
 use std::rc::Rc;
 
-use gpui::{AnyElement, App, Div, FontWeight, SharedString, Window, div, prelude::*, px, rgb};
+use gpui::{
+    AnyElement, App, Div, FontWeight, SharedString, Window, div, prelude::*, px, rems, rgb,
+};
 
 use crate::{ControlDefinition, ControlKind, ControlValue, HblankProps};
 
@@ -56,7 +58,7 @@ pub struct HeaderProps {
 pub fn header(props: HeaderProps) -> Div {
     let ready = props.status.as_ref() == "Ready";
     div()
-        .h(px(58.0))
+        .h(rems(3.625))
         .flex_none()
         .flex()
         .items_center()
@@ -161,7 +163,7 @@ pub fn search(props: SearchProps, on_focus: UiHandler<SearchAction>) -> impl Int
         .mx_3()
         .mt_4()
         .mb_3()
-        .h(px(40.0))
+        .h(rems(2.5))
         .flex_none()
         .flex()
         .items_center()
@@ -233,7 +235,7 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
             previous_group = Some(item.group);
             children.push(
                 div()
-                    .mt_4()
+                    .mt_3()
                     .mb_1()
                     .px_4()
                     .text_xs()
@@ -266,7 +268,7 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
     }
 
     div()
-        .w(px(272.0))
+        .w(rems(17.0))
         .flex_1()
         .min_h_0()
         .flex()
@@ -306,7 +308,7 @@ fn navigation_row(
     div()
         .id(("hblank-nav", index))
         .mx_2()
-        .h(px(36.0))
+        .h(rems(2.0))
         .flex()
         .items_center()
         .px_3()
@@ -369,7 +371,7 @@ pub fn toolbar(props: ToolbarProps, on_action: UiHandler<ToolbarAction>) -> Div 
     let controls_handler = on_action.clone();
     let docs_handler = on_action;
     div()
-        .h(px(64.0))
+        .h(rems(4.0))
         .flex_none()
         .flex()
         .items_center()
@@ -436,7 +438,7 @@ fn tab_button(
 ) -> impl IntoElement {
     div()
         .id(label)
-        .h(px(32.0))
+        .h(rems(2.0))
         .flex()
         .items_center()
         .px_3()
@@ -484,7 +486,7 @@ pub fn canvas(props: CanvasProps, preview: AnyElement) -> Div {
         .bg(rgb(theme::CANVAS))
         .child(
             div()
-                .h(px(38.0))
+                .h(rems(2.375))
                 .flex_none()
                 .flex()
                 .items_center()
@@ -508,8 +510,8 @@ pub fn canvas(props: CanvasProps, preview: AnyElement) -> Div {
                 .justify_center()
                 .child(
                     div()
-                        .min_w(px(280.0))
-                        .min_h(px(180.0))
+                        .min_w(rems(17.5))
+                        .min_h(rems(11.25))
                         .p_8()
                         .flex()
                         .items_center()
@@ -561,7 +563,7 @@ pub fn controls_panel(props: ControlsPanelProps<'_>, on_action: UiHandler<Contro
     let reset_handler = on_action;
 
     div()
-        .w(px(320.0))
+        .w(rems(20.0))
         .h_full()
         .flex_none()
         .flex()
@@ -571,7 +573,7 @@ pub fn controls_panel(props: ControlsPanelProps<'_>, on_action: UiHandler<Contro
         .border_color(rgb(theme::LINE))
         .child(
             div()
-                .h(px(48.0))
+                .h(rems(3.0))
                 .flex_none()
                 .flex()
                 .items_center()
@@ -589,7 +591,7 @@ pub fn controls_panel(props: ControlsPanelProps<'_>, on_action: UiHandler<Contro
                 .child(
                     div()
                         .id("hblank-reset")
-                        .h(px(32.0))
+                        .h(rems(2.0))
                         .flex()
                         .items_center()
                         .px_3()
@@ -705,8 +707,8 @@ fn boolean_control(
     };
     div()
         .id(("hblank-bool", index))
-        .w(px(44.0))
-        .h(px(24.0))
+        .w(rems(2.75))
+        .h(rems(1.5))
         .p_1()
         .flex()
         .items_center()
@@ -749,7 +751,7 @@ fn text_control(
     let empty = value.is_empty();
     div()
         .id(("hblank-text", index))
-        .min_h(px(36.0))
+        .min_h(rems(2.25))
         .w_full()
         .flex()
         .items_center()
@@ -811,8 +813,8 @@ fn number_control(
         }))
         .child(
             div()
-                .w(px(72.0))
-                .h(px(34.0))
+                .w(rems(4.5))
+                .h(rems(2.125))
                 .flex()
                 .items_center()
                 .justify_center()
@@ -850,7 +852,7 @@ fn enum_control(
             let is_selected = selected == *option;
             div()
                 .id(("hblank-enum", index * 100 + option_index))
-                .h(px(32.0))
+                .h(rems(2.0))
                 .flex()
                 .items_center()
                 .px_3()
@@ -935,7 +937,7 @@ pub struct DocsPanelProps {
 pub fn docs_panel(props: DocsPanelProps) -> Div {
     let has_docs = !props.docs.is_empty();
     div()
-        .w(px(320.0))
+        .w(rems(20.0))
         .h_full()
         .flex_none()
         .flex()
@@ -945,7 +947,7 @@ pub fn docs_panel(props: DocsPanelProps) -> Div {
         .border_color(rgb(theme::LINE))
         .child(
             div()
-                .h(px(48.0))
+                .h(rems(3.0))
                 .flex_none()
                 .flex()
                 .items_center()
@@ -1016,7 +1018,7 @@ pub fn empty_state(props: EmptyStateProps) -> Div {
         .bg(rgb(theme::CANVAS))
         .child(
             div()
-                .w(px(420.0))
+                .w(rems(26.25))
                 .p_8()
                 .flex()
                 .flex_col()
