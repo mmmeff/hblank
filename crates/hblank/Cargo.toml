@@ -10,7 +10,7 @@ readme.workspace = true
 
 [dependencies]
 gpui.workspace = true
-hblank-macros = { path = "../hblank-macros", version = "0.1.0" }
+hblank-macros = { path = "../hblank-macros", version = "0.1.1" }
 inventory.workspace = true
 serde.workspace = true
 thiserror.workspace = true

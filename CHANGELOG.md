@@ -1,3 +1,10 @@
+## [0.1.1](https://github.com/mmmeff/hblank/compare/v0.1.0...v0.1.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* rename hbuild skill to hblank ([44c46b7](https://github.com/mmmeff/hblank/commit/44c46b740f0c047436759e706ad57524ef642463))
+
 # [0.1.0](https://github.com/mmmeff/hblank/compare/v0.0.0...v0.1.0) (2026-08-24)
 
 
