@@ -1,3 +1,10 @@
+# [0.5.0](https://github.com/mmmeff/hblank/compare/v0.4.2...v0.5.0) (2026-08-25)
+
+
+### Features
+
+* **harness:** integrate Hblank branding ([0e8cdef](https://github.com/mmmeff/hblank/commit/0e8cdef65c75420fd1f03d7fdd1b14ad52e60531))
+
 ## [0.4.2](https://github.com/mmmeff/hblank/compare/v0.4.1...v0.4.2) (2026-08-24)
 
 
