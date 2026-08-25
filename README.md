@@ -125,6 +125,6 @@ The skill teaches the same component model and CLI workflow as the guides, then 
 
 ## Project status
 
-Hblank is pre-1.0 and targets GPUI 0.2.2. The GPUI adapter works end to end today. `hblank-core` keeps the catalog, controls, docs, and theme types independent of GPUI so other Rust UI frameworks can add their own adapters later.
+Hblank is pre-1.0 and targets the [`gpui` 0.2.2 package published on crates.io](https://crates.io/crates/gpui/0.2.2). It does not target a Zed release tag or the GPUI crate on Zed's `main` branch. Those sources can expose different APIs while they declare the same GPUI version. The GPUI adapter works end to end today. `hblank-core` keeps the catalog, controls, docs, and theme types independent of GPUI so other Rust UI frameworks can add their own adapters later.
 
 APIs may change before 1.0. The dogfood project is the compatibility check: Hblank must be able to build and inspect its own components.
