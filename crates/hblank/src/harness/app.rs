@@ -12,8 +12,8 @@ use crate::gpui::Application;
 
 use crate::gpui::{
     App, Bounds, Context, FocusHandle, IntoElement, KeyDownEvent, Modifiers, Render, SharedString,
-    Subscription, Window, WindowAppearance, WindowBounds, WindowOptions, div, prelude::*, px, rems,
-    rgb, size,
+    Subscription, TitlebarOptions, Window, WindowAppearance, WindowBounds, WindowOptions, div,
+    prelude::*, px, rems, rgb, size,
 };
 use serde::{Deserialize, Serialize};
 
@@ -159,6 +159,10 @@ impl HarnessApp {
         let mut persisted = load_state(&state_path);
         let session = env::var("HBLANK_SESSION_ID")
             .unwrap_or_else(|_| format!("process-{}", std::process::id()));
+        let project: SharedString = env::var("HBLANK_WINDOW_TITLE")
+            .unwrap_or_else(|_| "GPUI project · Hblank".to_owned())
+            .into();
+        window.set_window_title(project.as_ref());
         let (components, mut fixtures, mut status) = match registered_catalog() {
             Ok(catalog) => {
                 let (components, fixtures) = catalog.into_parts();
@@ -237,9 +241,7 @@ impl HarnessApp {
             number_draft: String::new(),
             ui_scale: DEFAULT_UI_SCALE,
             focus_handle,
-            project: env::var("HBLANK_WINDOW_TITLE")
-                .unwrap_or_else(|_| "GPUI project · Hblank".to_owned())
-                .into(),
+            project,
             status,
             session,
             theme_mode,
@@ -880,6 +882,10 @@ pub fn run_harness() {
         let result = cx.open_window(
             WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
+                titlebar: Some(TitlebarOptions {
+                    title: Some("Hblank".into()),
+                    ..Default::default()
+                }),
                 window_min_size: Some(size(px(900.0), px(600.0))),
                 app_id: Some("hblank".to_owned()),
                 ..Default::default()

@@ -44,8 +44,14 @@
     <!-- Header -->
     <rect x="36" y="36" width="1528" height="66" fill="#17171c"/>
     <line x1="36" y1="102" x2="1564" y2="102" stroke="#393944"/>
-    <rect x="58" y="52" width="36" height="36" rx="10" fill="#7559e8"/>
-    <text x="76" y="77" class="sans text" font-size="20" font-weight="800" text-anchor="middle">H</text>
+    <g transform="translate(56 49) scale(.0390625)">
+      <g fill="none" stroke="#7559e8" stroke-linecap="round" stroke-linejoin="round" stroke-width="112">
+        <path d="M432 256H640A104 104 0 0 1 744 360V664A104 104 0 0 1 640 768H528"/>
+        <path d="M336 200C274 200 224 250 224 312V712C224 774 274 824 336 824Z" fill="#7559e8" stroke="none"/>
+        <path d="M280 536C308 496 352 472 400 472C472 472 528 528 528 600V768"/>
+      </g>
+      <rect x="560" y="336" width="96" height="96" rx="22" fill="#7559e8"/>
+    </g>
     <text x="108" y="73" class="sans text" font-size="18" font-weight="750">hblank</text>
     <rect x="176" y="57" width="1" height="26" fill="#393944"/>
     <text x="194" y="73" class="sans subtle" font-size="13">hblank-dogfood</text>

@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/logo/hblank-mark.svg" alt="Hblank logo" width="128" height="128">
+
 # hblank
 
 **Develop GPUI components in isolation.**

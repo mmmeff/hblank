@@ -1,16 +1,33 @@
 #![allow(clippy::unreadable_literal)] // Six-digit RGB values remain recognizable as design tokens.
 
-use std::rc::Rc;
+use std::{
+    rc::Rc,
+    sync::{Arc, OnceLock},
+};
 
 use crate::gpui;
 use crate::gpui::{
-    AnyElement, App, Div, FontWeight, SharedString, Window, div, prelude::*, px, rems, rgb,
+    AnyElement, App, Div, FontWeight, Image, ImageFormat, SharedString, Window, div, img,
+    prelude::*, px, rems, rgb,
 };
 
 use crate::{
     CalloutTone, ControlDefinition, ControlKind, ControlValue, HblankProps, NumberConstraints,
     TextMode, ThemeMode,
 };
+
+const HBLANK_MARK_SVG: &[u8] = include_bytes!("../../assets/hblank-mark.svg");
+
+fn hblank_mark() -> Arc<Image> {
+    static MARK: OnceLock<Arc<Image>> = OnceLock::new();
+
+    Arc::clone(MARK.get_or_init(|| {
+        Arc::new(Image::from_bytes(
+            ImageFormat::Svg,
+            HBLANK_MARK_SVG.to_vec(),
+        ))
+    }))
+}
 
 pub(super) mod theme {
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -196,17 +213,7 @@ pub fn header(props: HeaderProps) -> Div {
                 .flex()
                 .items_center()
                 .gap_3()
-                .child(
-                    div()
-                        .size_8()
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .rounded_lg()
-                        .bg(rgb(theme::accent()))
-                        .font_weight(FontWeight::BOLD)
-                        .child("H"),
-                )
+                .child(img(hblank_mark()).size_10())
                 .child(
                     div()
                         .flex()
@@ -1520,19 +1527,7 @@ pub fn empty_state(props: EmptyStateProps) -> Div {
                 .bg(rgb(theme::paper()))
                 .shadow_md()
                 .text_center()
-                .child(
-                    div()
-                        .mb_4()
-                        .size_10()
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .rounded_lg()
-                        .bg(rgb(theme::accent()))
-                        .font_weight(FontWeight::BOLD)
-                        .text_color(rgb(theme::chrome_text()))
-                        .child("H"),
-                )
+                .child(img(hblank_mark()).mb_4().size_16())
                 .child(
                     div()
                         .mb_2()

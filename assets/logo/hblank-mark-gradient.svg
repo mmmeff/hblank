@@ -1,0 +1,30 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 1024 1024"
+  role="img"
+  aria-labelledby="title"
+>
+  <title id="title">Hblank gradient logo mark</title>
+  <defs>
+    <linearGradient id="hblank-violet" x1="224" y1="824" x2="800" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6747F5" />
+      <stop offset="1" stop-color="#8B75F6" />
+    </linearGradient>
+  </defs>
+  <g
+    fill="none"
+    stroke="url(#hblank-violet)"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="112"
+  >
+    <path d="M432 256H640A104 104 0 0 1 744 360V664A104 104 0 0 1 640 768H528" />
+    <path
+      d="M336 200C274 200 224 250 224 312V712C224 774 274 824 336 824Z"
+      fill="url(#hblank-violet)"
+      stroke="none"
+    />
+    <path d="M280 536C308 496 352 472 400 472C472 472 528 528 528 600V768" />
+  </g>
+  <rect x="560" y="336" width="96" height="96" rx="22" fill="url(#hblank-violet)" />
+</svg>
