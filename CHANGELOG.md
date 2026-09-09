@@ -1,3 +1,10 @@
+# [0.6.0](https://github.com/mmmeff/hblank/compare/v0.5.0...v0.6.0) (2026-09-09)
+
+
+### Features
+
+* **harness:** add collapsible navigation and native text editing ([4da8bf4](https://github.com/mmmeff/hblank/commit/4da8bf45c653c3bc25fcda9252e73bc96aba812a))
+
 ## Unreleased
 
 ### Features
