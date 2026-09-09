@@ -4,7 +4,6 @@ members = [
     "crates/hblank-cli",
     "crates/hblank-core",
     "crates/hblank-macros",
-    "fixtures/dogfood",
 ]
 resolver = "2"
 

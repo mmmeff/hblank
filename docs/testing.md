@@ -105,7 +105,7 @@ struct FixtureCardHandle {
 
 #[hblank::component(
     title = "Fixture card",
-    group = "Dogfood",
+    group = "Components",
     handle = FixtureCardHandle
 )]
 fn fixture_card_component(

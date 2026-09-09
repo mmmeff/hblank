@@ -1,0 +1,7 @@
+fixtures = ["catalog/*.hblank.rs"]
+ignore = ["target/**", ".hblank/**", "node_modules/**"]
+
+[window]
+title = "Hblank · Components"
+width = 1440
+height = 900

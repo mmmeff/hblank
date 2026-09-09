@@ -17,7 +17,10 @@ Building a component should not require booting the whole application, loading t
 
 Hblank gives each GPUI component a small Rust fixture file. Run one command to browse its states, edit real props, read its docs, and check changes in a native GPUI window.
 
-![Hblank's component catalog with an isolated preview and generated property controls](assets/hblank-harness.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/hblank-harness-dark.png">
+  <img src="assets/hblank-harness.png" alt="Hblank's own Callout component in the native catalog, with fixture navigation and generated controls">
+</picture>
 
 ## Why Hblank
 
@@ -139,8 +142,18 @@ npx skills add mmmeff/hblank
 
 The skill teaches the same component model and CLI workflow as the guides, then requires the agent to check the running GPUI window.
 
+## Develop Hblank itself
+
+This repository is already configured to browse Hblank's own layout, input, and documentation components. From the repository root:
+
+```bash
+hblank dev
+```
+
+The catalog lives in `catalog/`, and `.hblank/` builds the preview against the local runtime. No initialization or separate demo project is needed. Use `cargo run -p hblank-cli -- dev` to run the checked-out CLI, and `hblank list` to see every component and variant.
+
 ## Project status
 
 Hblank is pre-1.0 and targets the [`gpui` 0.2.2 package published on crates.io](https://crates.io/crates/gpui/0.2.2). It does not target a Zed release tag or the GPUI crate on Zed's `main` branch. Those sources can expose different APIs while they declare the same GPUI version. The GPUI adapter works end to end today. `hblank-core` keeps the catalog, controls, docs, and theme types independent of GPUI so other Rust UI frameworks can add their own adapters later.
 
-APIs may change before 1.0. The dogfood project is the compatibility check: Hblank must be able to build and inspect its own components.
+APIs may change before 1.0. The repository's component catalog is the compatibility check: Hblank must be able to build and inspect its own components.
