@@ -127,6 +127,7 @@ Rules:
 - use “component” and “fixture,” not “story,” in project terminology;
 - use component Rustdoc for the Docs panel, fixture Rustdoc for variant notes, and field Rustdoc for control help;
 - multiple components and variants per file are supported and sorted by group, component, variant, then canonical id;
+- the native sidebar renders groups as collapsible sections, closed initially and temporarily opened by filtering;
 - never edit `.hblank/generated/fixtures.rs` manually.
 
 **Complete when:** `hblank list` contains the expected component, nested variants, canonical ids, docs metadata, and controls.

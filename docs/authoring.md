@@ -53,6 +53,10 @@ Hblank uses field names as stable control IDs and field Rustdoc as help text.
 
 Numeric fields accept `min`, `max`, and positive `step` values. Hblank rejects non-finite numbers, fractions assigned to integers, values outside the Rust type, and values outside configured limits.
 
+Search and generated text/number fields use native GPUI editors with a blinking caret, click/drag selection, Shift+arrow selection, Home/End, clipboard shortcuts, undo/redo, and IME composition. Single-line fields scroll horizontally to keep the caret visible. Multiline fields wrap inside a bounded, vertically scrollable editor; Enter inserts a line break.
+
+Invalid numeric drafts stay visible while the fixture keeps its last valid value. Steppers and Reset synchronize the editor with the resulting value. Editing a component's own input in the preview does not type into the harness search or property fields.
+
 A unit enum can override its generated label:
 
 ```rust
@@ -211,7 +215,7 @@ src/badge.hblank.rs#badge_warning
 
 Run `hblank list` instead of building IDs by hand.
 
-A file can register several components and any number of variants. Hblank sorts the catalog by group, component title, variant title, and canonical ID.
+An authoring file can register several components and any number of variants. Hblank sorts the catalog by group, component title, variant title, and canonical ID. The sidebar renders each group as a collapsible section: sections start closed, clicking a section heading toggles it, and entering a filter temporarily reveals matching sections.
 
 ## Generated documentation
 

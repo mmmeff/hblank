@@ -1,7 +1,7 @@
 #![allow(clippy::unreadable_literal)] // Six-digit RGB values remain recognizable as design tokens.
 
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     env, fs,
     path::{Path, PathBuf},
     rc::Rc,
@@ -11,9 +11,9 @@ use crate::gpui;
 use crate::gpui::Application;
 
 use crate::gpui::{
-    App, Bounds, Context, FocusHandle, IntoElement, KeyDownEvent, Modifiers, Render, SharedString,
-    Subscription, TitlebarOptions, Window, WindowAppearance, WindowBounds, WindowOptions, div,
-    prelude::*, px, rems, rgb, size,
+    App, Bounds, Context, Entity, FocusHandle, IntoElement, KeyDownEvent, Modifiers, Render,
+    SharedString, Subscription, TitlebarOptions, Window, WindowAppearance, WindowBounds,
+    WindowOptions, div, prelude::*, px, rems, rgb, size,
 };
 use serde::{Deserialize, Serialize};
 
@@ -26,10 +26,11 @@ use crate::{
 use super::components::{
     CanvasProps, ControlAction, ControlsPanelProps, DocsPanelProps, EmptyStateProps, HeaderProps,
     InspectorTab, NavigationAction, NavigationComponent, NavigationProps, NavigationVariant,
-    SearchAction, SearchProps, ToolbarAction, ToolbarProps, UiHandler, canvas, controls_panel,
-    doc_callout, doc_controls, doc_fixture, doc_heading, doc_props, doc_prose, doc_source,
-    docs_panel, empty_state, header, navigation, search, theme, toolbar,
+    SearchProps, ToolbarAction, ToolbarProps, UiHandler, canvas, controls_panel, doc_callout,
+    doc_controls, doc_fixture, doc_heading, doc_props, doc_prose, doc_source, docs_panel,
+    empty_state, header, navigation, search, theme, toolbar,
 };
+use super::input::{self, InputEvent, TextInput};
 
 const DEFAULT_WIDTH: f32 = 1440.0;
 const DEFAULT_HEIGHT: f32 = 900.0;
@@ -54,22 +55,16 @@ struct PersistedState {
     controls: BTreeMap<String, BTreeMap<String, ControlValue>>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum EditingTarget {
-    Search,
-    TextControl(&'static str),
-    NumberControl(&'static str),
-}
-
 struct HarnessApp {
     components: Vec<ComponentDefinition>,
     fixtures: Vec<FixtureDefinition>,
     navigation: Vec<NavigationComponent>,
+    collapsed_groups: BTreeSet<String>,
     selected: Option<usize>,
     filter: String,
     inspector: InspectorTab,
-    editing: EditingTarget,
-    number_draft: String,
+    search_input: Entity<TextInput>,
+    control_inputs: BTreeMap<(usize, usize), BTreeMap<&'static str, Entity<TextInput>>>,
     ui_scale: f32,
     focus_handle: FocusHandle,
     project: SharedString,
@@ -80,6 +75,9 @@ struct HarnessApp {
     appearance_subscription: Option<Subscription>,
     state_path: PathBuf,
 }
+
+#[cfg(all(test, feature = "test-support"))]
+mod input_tests;
 
 fn initial_selection<'a>(
     entries: impl Iterator<Item = (&'a str, &'a str)>,
@@ -138,6 +136,22 @@ fn fixture_matches_query(fixture: &FixtureDefinition, query: &str) -> bool {
         || metadata.group.to_ascii_lowercase().contains(query)
 }
 
+fn fixture_is_visible(
+    fixture: &FixtureDefinition,
+    query: &str,
+    collapsed_groups: &BTreeSet<String>,
+) -> bool {
+    fixture_matches_query(fixture, query)
+        && (!query.is_empty() || !collapsed_groups.contains(fixture.metadata().group))
+}
+
+fn toggle_group(collapsed_groups: &mut BTreeSet<String>, group: &str) {
+    let group = group.to_owned();
+    if !collapsed_groups.remove(&group) {
+        collapsed_groups.insert(group);
+    }
+}
+
 fn ui_scale_delta(key: &str, modifiers: Modifiers) -> Option<f32> {
     if !modifiers.platform || modifiers.control || modifiers.alt || modifiers.function {
         return None;
@@ -154,6 +168,32 @@ fn bounded_ui_scale(current: f32, delta: f32) -> f32 {
 }
 
 impl HarnessApp {
+    fn navigation_components(
+        components: &[ComponentDefinition],
+        fixtures: &[FixtureDefinition],
+    ) -> Vec<NavigationComponent> {
+        components
+            .iter()
+            .filter_map(|component| {
+                let metadata = component.metadata();
+                let variants = fixtures
+                    .iter()
+                    .filter(|fixture| fixture.metadata().component_id == metadata.id)
+                    .map(|fixture| NavigationVariant {
+                        id: fixture.metadata().id.clone().into(),
+                        title: fixture.metadata().title,
+                    })
+                    .collect::<Vec<_>>();
+                (!variants.is_empty()).then(|| NavigationComponent {
+                    id: metadata.id.clone().into(),
+                    title: metadata.title,
+                    group: metadata.group,
+                    variants,
+                })
+            })
+            .collect()
+    }
+
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let state_path = state_path();
         let mut persisted = load_state(&state_path);
@@ -202,43 +242,36 @@ impl HarnessApp {
         if (requested_fixture.is_some() || requested_fixture_id.is_some()) && !matched_fixture {
             status = "Requested fixture does not match a registered variant".into();
         }
-        let navigation = components
+        let navigation = Self::navigation_components(&components, &fixtures);
+        let collapsed_groups = components
             .iter()
-            .filter_map(|component| {
-                let metadata = component.metadata();
-                let variants = fixtures
-                    .iter()
-                    .filter(|fixture| fixture.metadata().component_id == metadata.id)
-                    .map(|fixture| NavigationVariant {
-                        id: fixture.metadata().id.clone().into(),
-                        title: fixture.metadata().title,
-                    })
-                    .collect::<Vec<_>>();
-                (!variants.is_empty()).then(|| NavigationComponent {
-                    id: metadata.id.clone().into(),
-                    title: metadata.title,
-                    group: metadata.group,
-                    variants,
-                })
-            })
-            .collect::<Vec<_>>();
+            .map(|component| component.metadata().group.to_owned())
+            .collect();
         let focus_handle = cx.focus_handle();
-        focus(&focus_handle, window, cx);
+        let filter = if matched_fixture {
+            String::new()
+        } else {
+            persisted.filter
+        };
+        let search_input =
+            cx.new(|cx| TextInput::new(filter.clone(), "Filter fixtures…", false, cx));
+        search_input.read(cx).focus_handle().focus(window);
+        cx.subscribe_in(&search_input, window, |this, input, event, window, cx| {
+            this.on_search_input(input, *event, window, cx);
+        })
+        .detach();
         println!("Hblank harness ready: {} fixtures", fixtures.len());
 
         let mut app = Self {
             components,
             fixtures,
             navigation,
+            collapsed_groups,
             selected,
-            filter: if matched_fixture {
-                String::new()
-            } else {
-                persisted.filter
-            },
+            filter,
             inspector: InspectorTab::Controls,
-            editing: EditingTarget::Search,
-            number_draft: String::new(),
+            search_input,
+            control_inputs: BTreeMap::new(),
             ui_scale: DEFAULT_UI_SCALE,
             focus_handle,
             project,
@@ -262,10 +295,6 @@ impl HarnessApp {
         self.selected.and_then(|index| self.fixtures.get(index))
     }
 
-    fn selected_fixture_mut(&mut self) -> Option<&mut FixtureDefinition> {
-        self.selected.and_then(|index| self.fixtures.get_mut(index))
-    }
-
     fn selected_id(&self) -> Option<&str> {
         self.selected_fixture()
             .map(|fixture| fixture.metadata().id.as_str())
@@ -278,8 +307,6 @@ impl HarnessApp {
             .position(|fixture| fixture.metadata().id == id)
         {
             self.selected = Some(index);
-            self.editing = EditingTarget::Search;
-            self.number_draft.clear();
             self.status = SharedString::from("Ready");
             self.persist();
             cx.notify();
@@ -292,7 +319,7 @@ impl HarnessApp {
             .fixtures
             .iter()
             .enumerate()
-            .filter(|(_, fixture)| fixture_matches_query(fixture, &query))
+            .filter(|(_, fixture)| fixture_is_visible(fixture, &query, &self.collapsed_groups))
             .map(|(index, _)| index)
             .collect::<Vec<_>>();
         if visible.is_empty() {
@@ -300,14 +327,14 @@ impl HarnessApp {
         }
         let current = self
             .selected
-            .and_then(|selected| visible.iter().position(|index| *index == selected))
-            .unwrap_or(0);
-        let next = if delta.is_negative() {
-            current
+            .and_then(|selected| visible.iter().position(|index| *index == selected));
+        let next = match current {
+            None if delta.is_negative() => visible.len() - 1,
+            None => 0,
+            Some(current) if delta.is_negative() => current
                 .checked_sub(delta.unsigned_abs())
-                .unwrap_or(visible.len() - 1)
-        } else {
-            (current + delta.unsigned_abs()) % visible.len()
+                .unwrap_or(visible.len() - 1),
+            Some(current) => (current + delta.unsigned_abs()) % visible.len(),
         };
         self.selected = Some(visible[next]);
         self.persist();
@@ -317,17 +344,47 @@ impl HarnessApp {
     fn on_navigation(
         &mut self,
         action: &NavigationAction,
-        _window: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.select(action.id.as_ref(), cx);
+        match action {
+            NavigationAction::Select { id } => {
+                self.select(id.as_ref(), cx);
+                focus(&self.focus_handle, window, cx);
+            }
+            NavigationAction::ToggleGroup { group } => {
+                toggle_group(&mut self.collapsed_groups, group);
+                cx.notify();
+            }
+        }
     }
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    fn on_search_focus(&mut self, _: &SearchAction, window: &mut Window, cx: &mut Context<Self>) {
-        self.editing = EditingTarget::Search;
-        self.number_draft.clear();
-        focus(&self.focus_handle, window, cx);
-        cx.notify();
+    fn on_search_input(
+        &mut self,
+        input: &Entity<TextInput>,
+        event: InputEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        match event {
+            InputEvent::Changed => {
+                self.filter = input.read(cx).text().to_owned();
+                self.persist();
+                cx.notify();
+            }
+            InputEvent::Up => self.navigate_filtered(-1, cx),
+            InputEvent::Down => self.navigate_filtered(1, cx),
+            InputEvent::Escape => {
+                if self.filter.is_empty() {
+                    focus(&self.focus_handle, window, cx);
+                } else {
+                    self.filter.clear();
+                    input.update(cx, |input, cx| input.set_text("", cx));
+                    self.persist();
+                    cx.notify();
+                }
+            }
+            InputEvent::Submit => focus(&self.focus_handle, window, cx),
+        }
     }
 
     #[allow(clippy::trivially_copy_pass_by_ref)]
@@ -342,6 +399,7 @@ impl HarnessApp {
                 return;
             }
         }
+        focus(&self.focus_handle, window, cx);
         cx.notify();
     }
 
@@ -354,40 +412,176 @@ impl HarnessApp {
         cx.notify();
     }
 
-    fn on_control(&mut self, action: &ControlAction, window: &mut Window, cx: &mut Context<Self>) {
+    fn on_control(
+        &mut self,
+        fixture_index: usize,
+        action: &ControlAction,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.selected != Some(fixture_index) {
+            return;
+        }
         match action {
             ControlAction::Set { id, value } => {
-                let result = self
-                    .selected_fixture_mut()
-                    .expect("a rendered control always has a selected fixture")
-                    .set_control(id, value.clone());
-                self.status = match result {
-                    Ok(()) => SharedString::from("Ready"),
-                    Err(error) => SharedString::from(error.to_string()),
-                };
-            }
-            ControlAction::EditText { id } => {
-                self.editing = EditingTarget::TextControl(id);
-                self.number_draft.clear();
-                focus(&self.focus_handle, window, cx);
-            }
-            ControlAction::EditNumber { id } => {
-                self.editing = EditingTarget::NumberControl(id);
-                self.number_draft.clear();
-                self.status = "Type a number".into();
-                focus(&self.focus_handle, window, cx);
+                match self.fixtures[fixture_index].set_control(id, value.clone()) {
+                    Ok(()) => {
+                        self.status = "Ready".into();
+                        self.sync_control_inputs(fixture_index, Some(id), None, cx);
+                    }
+                    Err(error) => self.status = error.to_string().into(),
+                }
             }
             ControlAction::Reset => {
-                if let Some(fixture) = self.selected_fixture_mut() {
-                    fixture.reset();
-                }
-                self.editing = EditingTarget::Search;
-                self.number_draft.clear();
-                self.status = SharedString::from("Ready");
+                self.fixtures[fixture_index].reset();
+                self.sync_control_inputs(fixture_index, None, None, cx);
+                self.status = "Ready".into();
             }
         }
         self.persist();
         cx.notify();
+    }
+
+    fn prepare_control_inputs(
+        &mut self,
+        fixture_index: usize,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.control_inputs.contains_key(&(fixture_index, 0)) {
+            return;
+        }
+        let fixture = &self.fixtures[fixture_index];
+        let component = self
+            .components
+            .iter()
+            .find(|component| component.metadata().id == fixture.metadata().component_id)
+            .expect("registered fixture retains its component");
+        let panels = std::iter::once(0).chain(if component.docs().is_empty() {
+            vec![1]
+        } else {
+            component
+                .docs()
+                .blocks()
+                .iter()
+                .enumerate()
+                .filter_map(|(index, block)| {
+                    matches!(block, DocBlock::Controls).then_some(index + 1)
+                })
+                .collect()
+        });
+        for panel in panels {
+            let inputs = self
+                .control_inputs
+                .entry((fixture_index, panel))
+                .or_default();
+            for definition in fixture.props().definitions() {
+                let (text, placeholder, multiline) = match (
+                    definition.kind,
+                    fixture.props().control_value(definition.id),
+                ) {
+                    (ControlKind::Text { mode }, Some(ControlValue::Text(text))) => {
+                        let multiline = mode == TextMode::Multiline;
+                        (
+                            text,
+                            if multiline {
+                                "Type multiple lines…"
+                            } else {
+                                "Type a value…"
+                            },
+                            multiline,
+                        )
+                    }
+                    (ControlKind::Number { .. }, Some(ControlValue::Number(value))) => {
+                        (value.to_string(), "Type a number…", false)
+                    }
+                    _ => continue,
+                };
+                let input = cx.new(|cx| TextInput::new(text, placeholder, multiline, cx));
+                let id = definition.id;
+                cx.subscribe_in(&input, window, move |this, input, event, window, cx| {
+                    this.on_control_input(fixture_index, id, input, *event, window, cx);
+                })
+                .detach();
+                inputs.insert(id, input);
+            }
+        }
+    }
+
+    fn on_control_input(
+        &mut self,
+        fixture_index: usize,
+        id: &'static str,
+        input: &Entity<TextInput>,
+        event: InputEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.selected != Some(fixture_index) {
+            return;
+        }
+        match event {
+            InputEvent::Changed => {
+                let text = input.read(cx).text().to_owned();
+                let value = match self.fixtures[fixture_index].props().control_value(id) {
+                    Some(ControlValue::Text(_)) => ControlValue::Text(text),
+                    Some(ControlValue::Number(_)) => {
+                        let Ok(value) = text.parse::<f64>() else {
+                            self.status = "Enter a valid number".into();
+                            cx.notify();
+                            return;
+                        };
+                        ControlValue::Number(value)
+                    }
+                    _ => return,
+                };
+                match self.fixtures[fixture_index].set_control(id, value) {
+                    Ok(()) => {
+                        self.status = "Ready".into();
+                        self.sync_control_inputs(
+                            fixture_index,
+                            Some(id),
+                            Some(input.entity_id()),
+                            cx,
+                        );
+                        self.persist();
+                    }
+                    Err(error) => self.status = error.to_string().into(),
+                }
+                cx.notify();
+            }
+            InputEvent::Escape | InputEvent::Submit => {
+                self.search_input.read(cx).focus_handle().focus(window);
+            }
+            InputEvent::Up | InputEvent::Down => {}
+        }
+    }
+
+    fn sync_control_inputs(
+        &self,
+        fixture_index: usize,
+        control: Option<&str>,
+        source: Option<gpui::EntityId>,
+        cx: &mut Context<Self>,
+    ) {
+        for ((index, _), inputs) in &self.control_inputs {
+            if *index != fixture_index {
+                continue;
+            }
+            for (id, input) in inputs {
+                if control.is_some_and(|control| control != *id)
+                    || source == Some(input.entity_id())
+                {
+                    continue;
+                }
+                let text = match self.fixtures[fixture_index].props().control_value(id) {
+                    Some(ControlValue::Text(text)) => text,
+                    Some(ControlValue::Number(value)) => value.to_string(),
+                    _ => continue,
+                };
+                input.update(cx, |input, cx| input.set_text(text, cx));
+            }
+        }
     }
 
     fn adjust_ui_scale(&mut self, delta: f32, cx: &mut Context<Self>) {
@@ -399,138 +593,20 @@ impl HarnessApp {
         cx.notify();
     }
 
-    fn on_key_down(&mut self, event: &KeyDownEvent, _window: &mut Window, cx: &mut Context<Self>) {
+    fn on_key_down(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) {
         if let Some(delta) = ui_scale_delta(event.keystroke.key.as_str(), event.keystroke.modifiers)
         {
             self.adjust_ui_scale(delta, cx);
-            return;
+            cx.stop_propagation();
+        } else if self.focus_handle.is_focused(window) {
+            match event.keystroke.key.as_str() {
+                "up" => self.navigate_filtered(-1, cx),
+                "down" => self.navigate_filtered(1, cx),
+                "escape" => self.search_input.read(cx).focus_handle().focus(window),
+                _ => return,
+            }
+            cx.stop_propagation();
         }
-
-        match event.keystroke.key.as_str() {
-            "up" if self.editing == EditingTarget::Search => {
-                self.navigate_filtered(-1, cx);
-                return;
-            }
-            "down" if self.editing == EditingTarget::Search => {
-                self.navigate_filtered(1, cx);
-                return;
-            }
-            "escape" => {
-                if self.editing == EditingTarget::Search {
-                    self.filter.clear();
-                }
-                self.editing = EditingTarget::Search;
-                self.number_draft.clear();
-                self.status = "Ready".into();
-                self.persist();
-                cx.notify();
-                return;
-            }
-            "enter" => {
-                if let EditingTarget::TextControl(id) = self.editing
-                    && self.text_is_multiline(id)
-                {
-                    self.insert_text("\n");
-                } else {
-                    self.editing = EditingTarget::Search;
-                    self.number_draft.clear();
-                }
-                self.persist();
-                cx.notify();
-                return;
-            }
-            "backspace" => {
-                self.remove_character();
-                self.persist();
-                cx.notify();
-                return;
-            }
-            _ => {}
-        }
-
-        if let Some(text) = event.keystroke.key_char.as_deref()
-            && !text.chars().any(char::is_control)
-        {
-            self.insert_text(text);
-            self.persist();
-            cx.notify();
-        }
-    }
-
-    fn remove_character(&mut self) {
-        match self.editing {
-            EditingTarget::Search => {
-                self.filter.pop();
-            }
-            EditingTarget::TextControl(id) => {
-                let Some(fixture) = self.selected_fixture_mut() else {
-                    return;
-                };
-                let Some(ControlValue::Text(mut value)) = fixture.props().control_value(id) else {
-                    return;
-                };
-                value.pop();
-                let _ = fixture.set_control(id, ControlValue::Text(value));
-            }
-            EditingTarget::NumberControl(id) => {
-                self.number_draft.pop();
-                self.apply_number_draft(id);
-            }
-        }
-    }
-
-    fn insert_text(&mut self, text: &str) {
-        match self.editing {
-            EditingTarget::Search => self.filter.push_str(text),
-            EditingTarget::TextControl(id) => {
-                let Some(fixture) = self.selected_fixture_mut() else {
-                    return;
-                };
-                let Some(ControlValue::Text(mut value)) = fixture.props().control_value(id) else {
-                    return;
-                };
-                value.push_str(text);
-                let _ = fixture.set_control(id, ControlValue::Text(value));
-            }
-            EditingTarget::NumberControl(id) => {
-                if text
-                    .chars()
-                    .all(|character| character.is_ascii_digit() || ".-+eE".contains(character))
-                {
-                    self.number_draft.push_str(text);
-                    self.apply_number_draft(id);
-                }
-            }
-        }
-    }
-
-    fn apply_number_draft(&mut self, id: &'static str) {
-        let Ok(value) = self.number_draft.parse::<f64>() else {
-            self.status = "Enter a valid number".into();
-            return;
-        };
-        let result = self
-            .selected_fixture_mut()
-            .expect("an edited control always has a selected fixture")
-            .set_control(id, ControlValue::Number(value));
-        self.status = match result {
-            Ok(()) => "Ready".into(),
-            Err(error) => error.to_string().into(),
-        };
-    }
-
-    fn text_is_multiline(&self, id: &str) -> bool {
-        self.selected_fixture().is_some_and(|fixture| {
-            fixture.props().definitions().iter().any(|definition| {
-                definition.id == id
-                    && matches!(
-                        definition.kind,
-                        ControlKind::Text {
-                            mode: TextMode::Multiline
-                        }
-                    )
-            })
-        })
     }
 
     fn persist(&self) {
@@ -582,7 +658,7 @@ impl HarnessApp {
             blocks.push(doc_props(
                 self.fixtures[fixture_index].props().definitions(),
             ));
-            blocks.push(self.render_doc_controls(fixture_index, control_handler));
+            blocks.push(self.render_doc_controls(fixture_index, 1, control_handler));
             blocks.push(doc_source(
                 self.declaration_source(component, fixture_index),
             ));
@@ -593,8 +669,20 @@ impl HarnessApp {
             .docs()
             .blocks()
             .iter()
-            .map(|block| {
-                self.render_doc_block(component, block, fixture_index, window, cx, control_handler)
+            .enumerate()
+            .map(|(index, block)| {
+                window.with_element_namespace(("hblank-doc-fixture", fixture_index), |window| {
+                    window.with_element_namespace(("hblank-doc-block", index), |window| {
+                        self.render_doc_block(
+                            component,
+                            block,
+                            (fixture_index, index + 1),
+                            window,
+                            cx,
+                            control_handler,
+                        )
+                    })
+                })
             })
             .collect()
     }
@@ -603,11 +691,12 @@ impl HarnessApp {
         &self,
         component: &ComponentDefinition,
         block: &DocBlock,
-        fixture_index: usize,
+        panel_key: (usize, usize),
         window: &mut Window,
         cx: &mut Context<Self>,
         control_handler: &UiHandler<ControlAction>,
     ) -> gpui::AnyElement {
+        let (fixture_index, panel) = panel_key;
         match block {
             DocBlock::Heading { level, text } => doc_heading(*level, text.clone()),
             DocBlock::Prose(text) => doc_prose(text.clone()),
@@ -635,7 +724,7 @@ impl HarnessApp {
                     },
                 ),
             DocBlock::Props => doc_props(self.fixtures[fixture_index].props().definitions()),
-            DocBlock::Controls => self.render_doc_controls(fixture_index, control_handler),
+            DocBlock::Controls => self.render_doc_controls(fixture_index, panel, control_handler),
             DocBlock::Source => doc_source(self.declaration_source(component, fixture_index)),
             DocBlock::Callout { tone, title, body } => {
                 doc_callout(*tone, title.clone(), body.clone())
@@ -686,23 +775,20 @@ impl HarnessApp {
     fn render_doc_controls(
         &self,
         fixture_index: usize,
+        panel: usize,
         handler: &UiHandler<ControlAction>,
     ) -> gpui::AnyElement {
-        doc_controls(
-            ControlsPanelProps {
-                definitions: self.fixtures[fixture_index].props().definitions(),
-                props: self.fixtures[fixture_index].props(),
-                editing_text: match self.editing {
-                    EditingTarget::TextControl(id) => Some(id),
-                    EditingTarget::Search | EditingTarget::NumberControl(_) => None,
+        div()
+            .id(("hblank-doc-controls", panel))
+            .child(doc_controls(
+                ControlsPanelProps {
+                    definitions: self.fixtures[fixture_index].props().definitions(),
+                    props: self.fixtures[fixture_index].props(),
+                    inputs: &self.control_inputs[&(fixture_index, panel)],
                 },
-                editing_number: match self.editing {
-                    EditingTarget::NumberControl(id) => Some((id, self.number_draft.as_str())),
-                    EditingTarget::Search | EditingTarget::TextControl(_) => None,
-                },
-            },
-            handler,
-        )
+                handler,
+            ))
+            .into_any_element()
     }
 
     fn render_body(
@@ -720,6 +806,7 @@ impl HarnessApp {
             })
             .into_any_element();
         };
+        self.prepare_control_inputs(index, window, cx);
         let metadata = self.fixtures[index].metadata();
         let component = self
             .components
@@ -727,7 +814,9 @@ impl HarnessApp {
             .find(|component| component.metadata().id == metadata.component_id)
             .expect("registered fixture must retain its component");
         let component_metadata = component.metadata();
-        let preview = render_fixture(&self.fixtures[index], window, cx);
+        let preview = window.with_element_namespace(("hblank-preview", index), |window| {
+            render_fixture(&self.fixtures[index], window, cx)
+        });
         let title = if metadata.title == "Default" {
             component_metadata.title.to_owned()
         } else {
@@ -747,14 +836,7 @@ impl HarnessApp {
                 ControlsPanelProps {
                     definitions: self.fixtures[index].props().definitions(),
                     props: self.fixtures[index].props(),
-                    editing_text: match self.editing {
-                        EditingTarget::TextControl(id) => Some(id),
-                        EditingTarget::Search | EditingTarget::NumberControl(_) => None,
-                    },
-                    editing_number: match self.editing {
-                        EditingTarget::NumberControl(id) => Some((id, self.number_draft.as_str())),
-                        EditingTarget::Search | EditingTarget::TextControl(_) => None,
-                    },
+                    inputs: &self.control_inputs[&(index, 0)],
                 },
                 control_handler,
             )
@@ -797,22 +879,24 @@ impl Render for HarnessApp {
         window.set_rem_size(px(BASE_REM_SIZE * self.ui_scale));
         let navigation_handler: UiHandler<NavigationAction> =
             Rc::new(cx.listener(Self::on_navigation));
-        let search_handler: UiHandler<SearchAction> = Rc::new(cx.listener(Self::on_search_focus));
         let toolbar_handler: UiHandler<ToolbarAction> = Rc::new(cx.listener(Self::on_toolbar));
-        let control_handler: UiHandler<ControlAction> = Rc::new(cx.listener(Self::on_control));
+        let selected = self.selected;
+        let control_handler: UiHandler<ControlAction> =
+            Rc::new(cx.listener(move |this, action, window, cx| {
+                if let Some(index) = selected {
+                    this.on_control(index, action, window, cx);
+                }
+            }));
         let selected_id = self.selected_id();
-        let search_surface = search(
-            SearchProps {
-                query: self.filter.clone().into(),
-                active: self.editing == EditingTarget::Search,
-            },
-            search_handler,
-        );
+        let search_surface = search(SearchProps {
+            input: self.search_input.clone(),
+        });
         let navigation_surface = navigation(
             NavigationProps {
                 components: &self.navigation,
                 selected: selected_id,
                 query: &self.filter,
+                collapsed_groups: &self.collapsed_groups,
             },
             &navigation_handler,
         );
@@ -869,6 +953,7 @@ pub fn run_harness() {
     let application = Application::new();
 
     application.run(|cx: &mut App| {
+        input::init(cx);
         cx.on_window_closed(|cx| {
             if cx.windows().is_empty() {
                 cx.quit();
@@ -935,7 +1020,7 @@ fn env_dimension(name: &str, fallback: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
+    use std::collections::{BTreeMap, BTreeSet};
 
     use crate::{
         ControlValue, ResolvedTheme, ThemeMode,
@@ -944,7 +1029,7 @@ mod tests {
 
     use super::{
         MAX_UI_SCALE, MIN_UI_SCALE, PersistedState, UI_SCALE_STEP, bounded_ui_scale, env_dimension,
-        initial_selection, resolved_theme, ui_scale_delta,
+        initial_selection, resolved_theme, toggle_group, ui_scale_delta,
     };
 
     #[test]
@@ -1083,5 +1168,15 @@ mod tests {
             scale = bounded_ui_scale(scale, -UI_SCALE_STEP);
         }
         assert!((scale - MIN_UI_SCALE).abs() < f32::EPSILON);
+    }
+    #[test]
+    fn toggles_group_collapse_state() {
+        let mut collapsed_groups = BTreeSet::from(["Inputs".to_owned()]);
+
+        toggle_group(&mut collapsed_groups, "Inputs");
+        assert!(!collapsed_groups.contains("Inputs"));
+
+        toggle_group(&mut collapsed_groups, "Inputs");
+        assert!(collapsed_groups.contains("Inputs"));
     }
 }

@@ -1,14 +1,19 @@
 #![allow(clippy::unreadable_literal)] // Six-digit RGB values remain recognizable as design tokens.
 
-use std::rc::Rc;
-
-use hblank::gpui::{App, IntoElement, Window, div, prelude::*, px, rgb};
-use hblank::harness::{
-    CanvasProps, ControlsPanelProps, DocsPanelProps, EmptyStateProps, HeaderProps, InspectorTab,
-    NavigationComponent, NavigationProps, NavigationVariant, SearchProps, ToolbarProps, UiHandler, canvas, controls_panel,
-    doc_prose, doc_source, docs_panel, empty_state, header, navigation, search, toolbar,
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    rc::Rc,
 };
-use hblank::{HblankEnum, HblankProps, ThemeMode};
+
+use hblank::gpui::{App, Context, Entity, IntoElement, Render, Window, div, prelude::*, px, rgb};
+use hblank::harness::input::{InputEvent, TextInput};
+use hblank::harness::{
+    CanvasProps, ControlAction, ControlsPanelProps, DocsPanelProps, EmptyStateProps, HeaderProps,
+    InspectorTab, NavigationComponent, NavigationProps, NavigationVariant, SearchProps,
+    ToolbarProps, UiHandler, canvas, controls_panel, doc_prose, doc_source, docs_panel,
+    empty_state, header, navigation, search, toolbar,
+};
+use hblank::{ControlValue, HblankEnum, HblankProps, ThemeMode};
 
 fn noop<T: 'static>() -> UiHandler<T> {
     Rc::new(|_, _, _| {})
@@ -61,15 +66,12 @@ fn header_default() -> HeaderFixtureProps {
 struct SearchFixtureProps {
     /// Visible search query.
     query: String,
-    /// Whether keyboard input is currently routed to search.
-    active: bool,
 }
 
 impl Default for SearchFixtureProps {
     fn default() -> Self {
         Self {
             query: "button".to_owned(),
-            active: true,
         }
     }
 }
@@ -78,21 +80,33 @@ impl Default for SearchFixtureProps {
 /// The keyboard-focused fixture filter used above the navigation tree.
 fn search_fixture(
     props: &SearchFixtureProps,
-    _window: &mut Window,
-    _cx: &mut App,
+    window: &mut Window,
+    cx: &mut App,
 ) -> impl IntoElement {
-    search(
-        SearchProps {
-            query: props.query.clone().into(),
-            active: props.active,
-        },
-        noop(),
-    )
+    let state = window.use_keyed_state("dogfood-search", cx, |_, cx| SearchPreview {
+        external_query: props.query.clone(),
+        input: cx.new(|cx| TextInput::new(props.query.clone(), "Filter fixtures…", false, cx)),
+    });
+    let input = state.update(cx, |state, cx| {
+        if state.external_query != props.query {
+            state.external_query.clone_from(&props.query);
+            state
+                .input
+                .update(cx, |input, cx| input.set_text(props.query.clone(), cx));
+        }
+        state.input.clone()
+    });
+    search(SearchProps { input })
 }
 
 #[hblank::fixture(component = search_fixture, title = "Default")]
 fn search_default() -> SearchFixtureProps {
     SearchFixtureProps::default()
+}
+
+struct SearchPreview {
+    external_query: String,
+    input: Entity<TextInput>,
 }
 
 #[derive(Clone, Debug, HblankProps)]
@@ -142,12 +156,14 @@ fn navigation_fixture(
             }],
         },
     ];
+    let collapsed_groups = BTreeSet::from(["Components".to_owned()]);
     let handler = noop();
     navigation(
         NavigationProps {
             components: &components,
             selected: Some("components.button#default"),
             query: &props.query,
+            collapsed_groups: &collapsed_groups,
         },
         &handler,
     )
@@ -286,23 +302,131 @@ impl Default for ControlsFixtureProps {
 /// Automatically generated property controls, including field-level Rustdoc.
 fn controls_fixture(
     props: &ControlsFixtureProps,
-    _window: &mut Window,
-    _cx: &mut App,
+    window: &mut Window,
+    cx: &mut App,
 ) -> impl IntoElement {
-    controls_panel(
-        ControlsPanelProps {
-            definitions: props.definitions(),
-            props,
-            editing_text: Some("label"),
-            editing_number: None,
-        },
-        noop(),
-    )
+    let state = window.use_keyed_state("dogfood-controls", cx, |_, cx| {
+        ControlsPreview::new(props.clone(), cx)
+    });
+    state.update(cx, |state, cx| {
+        for definition in props.definitions() {
+            let value = props.control_value(definition.id);
+            if state.external.control_value(definition.id) != value {
+                if let Some(value) = value {
+                    let _ = state.props.set_control(definition.id, value);
+                    state.sync_input(definition.id, cx);
+                }
+            }
+        }
+        state.external = props.clone();
+    });
+    state
 }
 
 #[hblank::fixture(component = controls_fixture, title = "Default")]
 fn controls_default() -> ControlsFixtureProps {
     ControlsFixtureProps::default()
+}
+
+struct ControlsPreview {
+    external: ControlsFixtureProps,
+    props: ControlsFixtureProps,
+    inputs: BTreeMap<&'static str, Entity<TextInput>>,
+    error: Option<String>,
+}
+
+impl ControlsPreview {
+    fn new(props: ControlsFixtureProps, cx: &mut Context<Self>) -> Self {
+        let mut inputs = BTreeMap::new();
+        for (id, text, placeholder) in [
+            ("label", props.label.clone(), "Type a value…"),
+            ("count", props.count.to_string(), "Type a number…"),
+        ] {
+            let input = cx.new(|cx| TextInput::new(text, placeholder, false, cx));
+            cx.subscribe(&input, move |this, input, event, cx| {
+                if !matches!(event, InputEvent::Changed) {
+                    return;
+                }
+                let text = input.read(cx).text().to_owned();
+                let value = if id == "count" {
+                    let Ok(number) = text.parse::<f64>() else {
+                        this.error = Some("Enter a valid number".to_owned());
+                        cx.notify();
+                        return;
+                    };
+                    ControlValue::Number(number)
+                } else {
+                    ControlValue::Text(text)
+                };
+                this.error = this
+                    .props
+                    .set_control(id, value)
+                    .err()
+                    .map(|error| error.to_string());
+                cx.notify();
+            })
+            .detach();
+            inputs.insert(id, input);
+        }
+        Self {
+            external: props.clone(),
+            props,
+            inputs,
+            error: None,
+        }
+    }
+
+    fn sync_input(&self, id: &str, cx: &mut Context<Self>) {
+        let Some(input) = self.inputs.get(id) else {
+            return;
+        };
+        let text = match self.props.control_value(id) {
+            Some(ControlValue::Text(text)) => text,
+            Some(ControlValue::Number(value)) => value.to_string(),
+            _ => return,
+        };
+        input.update(cx, |input, cx| input.set_text(text, cx));
+    }
+
+    fn on_control(&mut self, action: &ControlAction, _: &mut Window, cx: &mut Context<Self>) {
+        match action {
+            ControlAction::Set { id, value } => {
+                self.error = self
+                    .props
+                    .set_control(id, value.clone())
+                    .err()
+                    .map(|error| error.to_string());
+                if self.error.is_none() {
+                    self.sync_input(id, cx);
+                }
+            }
+            ControlAction::Reset => {
+                self.props = self.external.clone();
+                self.error = None;
+                for id in self.inputs.keys() {
+                    self.sync_input(id, cx);
+                }
+            }
+        }
+        cx.notify();
+    }
+}
+
+impl Render for ControlsPreview {
+    fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .child(controls_panel(
+                ControlsPanelProps {
+                    definitions: self.props.definitions(),
+                    props: &self.props,
+                    inputs: &self.inputs,
+                },
+                Rc::new(cx.listener(Self::on_control)),
+            ))
+            .when_some(self.error.clone(), |this, error| {
+                this.child(div().text_sm().child(error))
+            })
+    }
 }
 
 #[derive(Clone, Debug, HblankProps)]
@@ -375,6 +499,3 @@ fn empty_state_fixture(
 fn empty_state_default() -> EmptyFixtureProps {
     EmptyFixtureProps::default()
 }
-
-
-

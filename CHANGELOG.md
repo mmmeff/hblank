@@ -1,3 +1,13 @@
+## Unreleased
+
+### Features
+
+* **harness:** make catalog groups collapsible and closed by default.
+
+### Bug Fixes
+
+* **harness:** replace append-only text fields with native editors supporting caret, selection, clipboard, IME, undo/redo, wrapping, and scrolling.
+
 # [0.5.0](https://github.com/mmmeff/hblank/compare/v0.4.2...v0.5.0) (2026-08-25)
 
 

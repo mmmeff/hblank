@@ -229,7 +229,7 @@ fn button_docs() -> hblank::DocPage {
 
 ## Multiple variants in one file
 
-Register one `#[hblank::component]` renderer, then add any number of zero-argument `#[hblank::fixture(component = renderer, title = "…")]` factories returning the same props type. Canonical component and fixture ids derive from source path plus function symbol. The harness groups by component and nests variants in title/id order. `hblank list` emits canonical `path#function` ids; source-path launch selects the first variant, while `--fixture-id` selects one exact registration and rejects unknown ids before launch.
+Register one `#[hblank::component]` renderer, then add any number of zero-argument `#[hblank::fixture(component = renderer, title = "…")]` factories returning the same props type. Canonical component and fixture ids derive from source path plus function symbol. The harness groups by component and nests variants in title/id order; its sidebar sections start collapsed and can be toggled by clicking their headings. Filtering temporarily opens matching sections. `hblank list` emits canonical `path#function` ids; source-path launch selects the first variant, while `--fixture-id` selects one exact registration and rejects unknown ids before launch.
 
 ## Migrating the removed fixture interface
 

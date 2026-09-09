@@ -1,20 +1,23 @@
 #![allow(clippy::unreadable_literal)] // Six-digit RGB values remain recognizable as design tokens.
 
 use std::{
+    collections::{BTreeMap, BTreeSet},
     rc::Rc,
     sync::{Arc, OnceLock},
 };
 
 use crate::gpui;
 use crate::gpui::{
-    AnyElement, App, Div, FontWeight, Image, ImageFormat, SharedString, Window, div, img,
+    AnyElement, App, Div, Entity, FontWeight, Image, ImageFormat, SharedString, Window, div, img,
     prelude::*, px, rems, rgb,
 };
 
 use crate::{
     CalloutTone, ControlDefinition, ControlKind, ControlValue, HblankProps, NumberConstraints,
-    TextMode, ThemeMode,
+    ThemeMode,
 };
+
+use super::input::TextInput;
 
 const HBLANK_MARK_SVG: &[u8] = include_bytes!("../../assets/hblank-mark.svg");
 
@@ -277,58 +280,22 @@ pub fn header(props: HeaderProps) -> Div {
         )
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct SearchProps {
-    pub query: SharedString,
-    pub active: bool,
+    pub input: Entity<TextInput>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct SearchAction;
-
 #[must_use]
-pub fn search(props: SearchProps, on_focus: UiHandler<SearchAction>) -> impl IntoElement {
-    let empty = props.query.is_empty();
-    let active = props.active;
+pub fn search(props: SearchProps) -> impl IntoElement {
     div()
         .id("hblank-search")
         .mx_3()
         .mt_4()
         .mb_3()
-        .h(rems(2.5))
         .flex_none()
-        .flex()
-        .items_center()
-        .px_3()
-        .rounded_lg()
-        .border_1()
-        .border_color(if active {
-            rgb(theme::accent())
-        } else {
-            rgb(theme::chrome_border())
-        })
-        .bg(rgb(theme::chrome_raised()))
         .text_sm()
-        .text_color(if empty {
-            rgb(theme::sidebar_text_muted())
-        } else {
-            rgb(theme::chrome_text())
-        })
-        .cursor_pointer()
-        .hover(move |this| {
-            this.border_color(rgb(if active {
-                theme::accent()
-            } else {
-                theme::chrome_text_muted()
-            }))
-        })
-        .active(|this| this.bg(rgb(theme::sidebar_hover())))
-        .on_click(move |_, window, cx| on_focus(&SearchAction, window, cx))
-        .child(if empty {
-            SharedString::from("Filter fixtures…")
-        } else {
-            props.query
-        })
+        .text_color(rgb(theme::chrome_text()))
+        .child(props.input)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -350,11 +317,13 @@ pub struct NavigationProps<'a> {
     pub components: &'a [NavigationComponent],
     pub selected: Option<&'a str>,
     pub query: &'a str,
+    pub collapsed_groups: &'a BTreeSet<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct NavigationAction {
-    pub id: SharedString,
+pub enum NavigationAction {
+    Select { id: SharedString },
+    ToggleGroup { group: &'static str },
 }
 
 fn navigation_matches(
@@ -368,11 +337,15 @@ fn navigation_matches(
         || variant.title.to_ascii_lowercase().contains(query)
 }
 
+fn group_is_collapsed(group: &str, query: &str, collapsed_groups: &BTreeSet<String>) -> bool {
+    query.is_empty() && collapsed_groups.contains(group)
+}
+
 #[must_use]
 pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAction>) -> Div {
     let query = props.query.to_ascii_lowercase();
     let mut previous_group = None;
-    let mut visible_count = 0;
+    let mut matching_count = 0;
     let mut row_index = 0;
     let mut children = Vec::new();
     for component in props.components {
@@ -384,10 +357,14 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
         if visible.is_empty() {
             continue;
         }
-        visible_count += visible.len();
+        matching_count += visible.len();
+        let collapsed = group_is_collapsed(component.group, &query, props.collapsed_groups);
         if previous_group != Some(component.group) {
             previous_group = Some(component.group);
-            children.push(group_heading(component.group));
+            children.push(group_heading(component.group, collapsed, on_select));
+        }
+        if collapsed {
+            continue;
         }
         let selected_component = component
             .variants
@@ -411,7 +388,7 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
             row_index += 1;
         }
     }
-    if visible_count == 0 {
+    if matching_count == 0 {
         children.push(
             div()
                 .mx_3()
@@ -443,27 +420,31 @@ pub fn navigation(props: NavigationProps<'_>, on_select: &UiHandler<NavigationAc
                 .overflow_scroll()
                 .children(children),
         )
-        .child(
-            div()
-                .flex_none()
-                .px_3()
-                .py_3()
-                .border_t_1()
-                .border_color(rgb(theme::chrome_border()))
-                .text_xs()
-                .text_color(rgb(theme::sidebar_text_muted()))
-                .child("Filter components and variants · Arrow keys navigate"),
-        )
 }
 
-fn group_heading(group: &'static str) -> AnyElement {
+fn group_heading(
+    group: &'static str,
+    collapsed: bool,
+    on_toggle: &UiHandler<NavigationAction>,
+) -> AnyElement {
+    let action = NavigationAction::ToggleGroup { group };
+    let handler = Rc::clone(on_toggle);
     div()
+        .id(group)
         .mt_3()
         .mb_1()
+        .h(rems(1.75))
+        .flex()
+        .items_center()
         .px_4()
+        .rounded_md()
         .text_xs()
         .font_weight(FontWeight::SEMIBOLD)
         .text_color(rgb(theme::sidebar_text_muted()))
+        .cursor_pointer()
+        .hover(|this| this.bg(rgb(theme::sidebar_hover())))
+        .on_click(move |_, window, cx| handler(&action, window, cx))
+        .child(div().mr_2().child(if collapsed { ">" } else { "v" }))
         .child(group)
         .into_any_element()
 }
@@ -475,7 +456,7 @@ fn component_row(
     selected: bool,
     on_select: &UiHandler<NavigationAction>,
 ) -> AnyElement {
-    let action = NavigationAction {
+    let action = NavigationAction::Select {
         id: first_variant.id.clone(),
     };
     let handler = Rc::clone(on_select);
@@ -515,7 +496,7 @@ fn variant_row(
     selected: bool,
     on_select: &UiHandler<NavigationAction>,
 ) -> AnyElement {
-    let action = NavigationAction {
+    let action = NavigationAction::Select {
         id: variant.id.clone(),
     };
     let handler = Rc::clone(on_select);
@@ -786,8 +767,7 @@ pub fn canvas(props: CanvasProps, preview: AnyElement) -> Div {
 pub struct ControlsPanelProps<'a> {
     pub definitions: &'static [ControlDefinition],
     pub props: &'a dyn HblankProps,
-    pub editing_text: Option<&'static str>,
-    pub editing_number: Option<(&'static str, &'a str)>,
+    pub inputs: &'a BTreeMap<&'static str, Entity<TextInput>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -795,12 +775,6 @@ pub enum ControlAction {
     Set {
         id: &'static str,
         value: ControlValue,
-    },
-    EditText {
-        id: &'static str,
-    },
-    EditNumber {
-        id: &'static str,
     },
     Reset,
 }
@@ -814,17 +788,8 @@ pub fn controls_panel(props: ControlsPanelProps<'_>, on_action: UiHandler<Contro
         .enumerate()
         .map(move |(index, definition)| {
             let value = props.props.control_value(definition.id);
-            let number_draft = props
-                .editing_number
-                .and_then(|(id, draft)| (id == definition.id).then_some(draft));
-            control_row(
-                index,
-                definition,
-                value,
-                props.editing_text == Some(definition.id),
-                number_draft,
-                row_handler.clone(),
-            )
+            let input = props.inputs.get(definition.id).cloned();
+            control_row(index, definition, value, input, row_handler.clone())
         });
     let reset_handler = on_action;
 
@@ -891,18 +856,10 @@ fn control_row(
     index: usize,
     definition: &'static ControlDefinition,
     value: Option<ControlValue>,
-    editing_text: bool,
-    number_draft: Option<&str>,
+    input: Option<Entity<TextInput>>,
     handler: UiHandler<ControlAction>,
 ) -> AnyElement {
-    let control = control_input(
-        index,
-        definition,
-        value,
-        editing_text,
-        number_draft,
-        handler,
-    );
+    let control = control_input(index, definition, value, input, handler);
     div()
         .px_4()
         .py_4()
@@ -945,23 +902,22 @@ fn control_input(
     index: usize,
     definition: &'static ControlDefinition,
     value: Option<ControlValue>,
-    editing_text: bool,
-    number_draft: Option<&str>,
+    input: Option<Entity<TextInput>>,
     handler: UiHandler<ControlAction>,
 ) -> AnyElement {
     match (definition.kind, value) {
         (ControlKind::Boolean, Some(ControlValue::Boolean(value))) => {
             boolean_control(index, definition.id, value, handler)
         }
-        (ControlKind::Text { mode }, Some(ControlValue::Text(value))) => {
-            text_control(index, definition.id, value, mode, editing_text, handler)
-        }
+        (ControlKind::Text { .. }, Some(ControlValue::Text(_))) => input
+            .expect("text controls require an editor")
+            .into_any_element(),
         (ControlKind::Number { constraints }, Some(ControlValue::Number(value))) => number_control(
             index,
             definition.id,
             value,
             constraints,
-            number_draft,
+            input.expect("number controls require an editor"),
             handler,
         ),
         (ControlKind::Enum { options }, Some(ControlValue::Enum(selected))) => {
@@ -1020,74 +976,16 @@ fn boolean_control(
         .into_any_element()
 }
 
-fn text_control(
-    index: usize,
-    id: &'static str,
-    value: String,
-    mode: TextMode,
-    editing: bool,
-    handler: UiHandler<ControlAction>,
-) -> AnyElement {
-    let action = ControlAction::EditText { id };
-    let empty = value.is_empty();
-    div()
-        .id(("hblank-text", index))
-        .min_h(rems(if mode == TextMode::Multiline {
-            5.0
-        } else {
-            2.25
-        }))
-        .w_full()
-        .flex()
-        .items_center()
-        .px_3()
-        .rounded_md()
-        .border_1()
-        .border_color(rgb(if editing {
-            theme::accent()
-        } else {
-            theme::line_strong()
-        }))
-        .bg(rgb(theme::paper()))
-        .text_sm()
-        .text_color(rgb(if empty {
-            theme::text_subtle()
-        } else {
-            theme::text()
-        }))
-        .cursor_pointer()
-        .hover(move |this| {
-            this.border_color(rgb(if editing {
-                theme::accent()
-            } else {
-                theme::chrome_text_muted()
-            }))
-        })
-        .active(|this| this.bg(rgb(theme::surface_subtle())))
-        .on_click(move |_, window, cx| handler(&action, window, cx))
-        .child(if empty {
-            SharedString::from(if mode == TextMode::Multiline {
-                "Type multiple lines…"
-            } else {
-                "Type a value…"
-            })
-        } else {
-            SharedString::from(value)
-        })
-        .into_any_element()
-}
-
 fn number_control(
     index: usize,
     id: &'static str,
     value: f64,
     constraints: NumberConstraints,
-    draft: Option<&str>,
+    input: Entity<TextInput>,
     handler: UiHandler<ControlAction>,
 ) -> AnyElement {
     let decrement = handler.clone();
-    let increment = handler.clone();
-    let edit = handler;
+    let increment = handler;
     let decrement_action = ControlAction::Set {
         id,
         value: ControlValue::Number(stepped_number(value, -constraints.step, constraints)),
@@ -1096,9 +994,7 @@ fn number_control(
         id,
         value: ControlValue::Number(stepped_number(value, constraints.step, constraints)),
     };
-    let edit_action = ControlAction::EditNumber { id };
     let constraint_label = number_constraint_label(constraints);
-    let display = draft.map_or_else(|| format_number(value), str::to_owned);
     div()
         .flex()
         .flex_col()
@@ -1111,37 +1007,7 @@ fn number_control(
                 .child(step_button(index * 2, "−", move |window, cx| {
                     decrement(&decrement_action, window, cx);
                 }))
-                .child(
-                    div()
-                        .id(("hblank-number", index))
-                        .min_w(rems(5.5))
-                        .h(rems(2.125))
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .px_2()
-                        .rounded_md()
-                        .border_1()
-                        .border_color(rgb(if draft.is_some() {
-                            theme::accent()
-                        } else {
-                            theme::line_strong()
-                        }))
-                        .bg(rgb(theme::surface_subtle()))
-                        .text_sm()
-                        .text_color(rgb(if display.is_empty() {
-                            theme::text_subtle()
-                        } else {
-                            theme::text()
-                        }))
-                        .cursor_pointer()
-                        .on_click(move |_, window, cx| edit(&edit_action, window, cx))
-                        .child(if display.is_empty() {
-                            "Type a number…".to_owned()
-                        } else {
-                            display
-                        }),
-                )
+                .child(div().flex_1().min_w_0().child(input))
                 .child(step_button(index * 2 + 1, "+", move |window, cx| {
                     increment(&increment_action, window, cx);
                 })),
@@ -1468,17 +1334,8 @@ pub fn doc_controls(
         .enumerate()
         .map(|(index, definition)| {
             let value = props.props.control_value(definition.id);
-            let number_draft = props
-                .editing_number
-                .and_then(|(id, draft)| (id == definition.id).then_some(draft));
-            control_row(
-                index,
-                definition,
-                value,
-                props.editing_text == Some(definition.id),
-                number_draft,
-                on_action.clone(),
-            )
+            let input = props.inputs.get(definition.id).cloned();
+            control_row(index, definition, value, input, on_action.clone())
         });
     div()
         .child(doc_heading(2, "Live controls"))
@@ -1547,7 +1404,9 @@ pub fn empty_state(props: EmptyStateProps) -> Div {
 
 #[cfg(test)]
 mod tests {
-    use super::{NavigationComponent, NavigationVariant, navigation_matches};
+    use std::collections::BTreeSet;
+
+    use super::{NavigationComponent, NavigationVariant, group_is_collapsed, navigation_matches};
 
     fn component() -> NavigationComponent {
         NavigationComponent {
@@ -1570,5 +1429,14 @@ mod tests {
         assert!(navigation_matches(&component, variant, "button"));
         assert!(navigation_matches(&component, variant, "loading"));
         assert!(!navigation_matches(&component, variant, "card"));
+    }
+
+    #[test]
+    fn collapsed_groups_reopen_while_filtering() {
+        let collapsed_groups = BTreeSet::from(["Inputs".to_owned()]);
+
+        assert!(group_is_collapsed("Inputs", "", &collapsed_groups));
+        assert!(!group_is_collapsed("Inputs", "load", &collapsed_groups));
+        assert!(!group_is_collapsed("Outputs", "", &collapsed_groups));
     }
 }

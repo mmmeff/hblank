@@ -65,13 +65,15 @@ The CLI walks files without following symlinks, normalizes paths, applies includ
 
 The generated component adapter downcasts dynamic props to the component's declared type and converts its output to `gpui::AnyElement`. The fixture factory takes no arguments and returns the same props type; the macro enforces that relationship at compile time.
 
-The runtime joins components and variants, rejects duplicate canonical ids, unknown components, and mismatched props types, then sorts by group/component/variant/id. The native catalog sidebar renders that hierarchy directly; keyboard and text filtering still operate on the flattened selectable variant order. Component and variant Rustdoc plus captured declarations remain available to generated pages and explicitly authored `DocPage` blocks.
+The runtime joins components and variants, rejects duplicate canonical ids, unknown components, and mismatched props types, then sorts by group/component/variant/id. The native catalog sidebar renders each group as a collapsible section that starts closed; clicking a heading toggles its rows, while filtering temporarily reveals matching sections. Keyboard filtering follows the same visible section behavior. Component and variant Rustdoc plus captured declarations remain available to generated pages and explicitly authored `DocPage` blocks.
 
 ## Controls
 
 `HblankProps` exposes static `ControlDefinition` metadata, current typed values, validated mutation, cloning, and downcasting. The derive reads named struct fields in declaration order; `#[hblank(skip)]` excludes a field without requiring `ControlField`.
 
 `String` controls are single-line by default; `#[hblank(multiline)]` selects the multiline editor. Numeric values pass through `f64`; `min`, `max`, and positive `step` literals become enforced metadata and drive direct input plus steppers. Integer updates still reject non-finite, fractional, and out-of-range values rather than truncating.
+
+Search, text controls, and numeric drafts share `harness::input::TextInput`, a retained GPUI entity implementing `EntityInputHandler`. It owns selection, caret, composition, clipboard, undo, and clipped scrolling/wrapping. The harness subscribes to editor events rather than handling raw character keys globally. Property editors are retained independently per fixture and controls panel; valid changes synchronize sibling panels, while invalid numeric drafts leave the last valid props intact.
 
 `HblankEnum` supports unit variants. Use `#[hblank(label = "High contrast")]` when identifier humanization is insufficient. Small enums render as chips and larger enums as a compact list.
 
