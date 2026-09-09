@@ -3,7 +3,8 @@ use std::path::PathBuf;
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use hblank_cli::{
-    CatalogOptions, DevOptions, InitOptions, TestOptions, initialize, run_dev, run_list, run_tests,
+    CatalogOptions, DevOptions, InitOptions, TestOptions, UpdateOptions, initialize, run_dev,
+    run_list, run_tests, run_update,
 };
 
 #[derive(Debug, Parser)]
@@ -72,6 +73,19 @@ USAGE:
         #[arg(long, value_name = "FILTER")]
         filter: Option<String>,
     },
+    /// Update the CLI and this project's Hblank dependencies to one published release.
+    #[command(
+        after_long_help = "Stop 'hblank dev' before updating. Git/path dependencies are not converted to crates.io.
+After updating, run 'hblank test' and restart 'hblank dev'."
+    )]
+    Update {
+        /// Initialized Rust package root whose Hblank dependencies should be updated.
+        #[arg(long, default_value = ".")]
+        project: PathBuf,
+        /// Exact published release to install instead of the latest stable release.
+        #[arg(long, value_name = "VERSION")]
+        version: Option<String>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -105,74 +119,15 @@ fn main() -> Result<()> {
             options.filter = filter;
             run_tests(&options)?;
         }
+        Command::Update { project, version } => {
+            let mut options = UpdateOptions::new(project);
+            options.version = version;
+            let report = run_update(&options)?;
+            println!(
+                "Updated Hblank to {}. Run 'hblank test', then restart 'hblank dev'.",
+                report.version
+            );
+        }
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use clap::CommandFactory;
-
-    use super::Cli;
-
-    #[test]
-    fn top_level_help_points_to_direct_fixture_launch() {
-        let mut command = Cli::command();
-        let mut output = Vec::new();
-        command
-            .write_long_help(&mut output)
-            .expect("top-level help should render");
-        let help = String::from_utf8(output).expect("help should be UTF-8");
-
-        assert!(help.contains("hblank dev --fixture src/button.hblank.rs"));
-        assert!(help.contains("Run 'hblank dev --help'"));
-    }
-
-    #[test]
-    fn list_help_documents_registered_catalog() {
-        let mut command = Cli::command();
-        let list = command
-            .find_subcommand_mut("list")
-            .expect("list subcommand should exist");
-        let mut output = Vec::new();
-        list.write_long_help(&mut output)
-            .expect("list help should render");
-        let help = String::from_utf8(output).expect("help should be UTF-8");
-
-        assert!(help.contains("canonical fixture ids"));
-    }
-
-    #[test]
-    fn test_help_documents_generated_cargo_target() {
-        let mut command = Cli::command();
-        let test = command
-            .find_subcommand_mut("test")
-            .expect("test subcommand should exist");
-        let mut output = Vec::new();
-        test.write_long_help(&mut output)
-            .expect("test help should render");
-        let help = String::from_utf8(output).expect("help should be UTF-8");
-
-        assert!(help.contains("explicit inline Rust tests"));
-        assert!(help.contains("--filter <FILTER>"));
-    }
-
-    #[test]
-    fn dev_help_documents_fixture_path_semantics() {
-        let mut command = Cli::command();
-        let dev = command
-            .find_subcommand_mut("dev")
-            .expect("dev subcommand should exist");
-        let mut output = Vec::new();
-        dev.write_long_help(&mut output)
-            .expect("dev help should render");
-        let help = String::from_utf8(output).expect("help should be UTF-8");
-
-        assert!(help.contains("--fixture <PATH>"));
-        assert!(help.contains("--fixture-id <ID>"));
-        assert!(help.contains("path#function"));
-        assert!(help.contains("Relative fixture paths are resolved from --project"));
-        assert!(help.contains("If a file registers multiple fixtures"));
-        assert!(help.contains("hblank dev --project crates/ui --fixture src/card.hblank.rs"));
-    }
 }

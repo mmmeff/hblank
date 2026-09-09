@@ -1,3 +1,9 @@
+## Unreleased
+
+### Features
+
+* **cli:** add `hblank update` to coordinate published CLI, host/preview dependencies, and lockfile updates with source preflight and failure rollback.
+
 # [0.6.0](https://github.com/mmmeff/hblank/compare/v0.5.0...v0.6.0) (2026-09-09)
 
 
@@ -5,15 +11,6 @@
 
 * **harness:** add collapsible navigation and native text editing ([4da8bf4](https://github.com/mmmeff/hblank/commit/4da8bf45c653c3bc25fcda9252e73bc96aba812a))
 
-## Unreleased
-
-### Features
-
-* **harness:** make catalog groups collapsible and closed by default.
-
-### Bug Fixes
-
-* **harness:** replace append-only text fields with native editors supporting caret, selection, clipboard, IME, undo/redo, wrapping, and scrolling.
 
 # [0.5.0](https://github.com/mmmeff/hblank/compare/v0.4.2...v0.5.0) (2026-08-25)
 

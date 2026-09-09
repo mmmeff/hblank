@@ -11,6 +11,7 @@ hblank init [--project PATH] [--runtime-path PATH]
 hblank dev [--project PATH] [--fixture PATH | --fixture-id ID]
 hblank list [--project PATH]
 hblank test [--project PATH] [--filter FILTER]
+hblank update [--project PATH] [--version VERSION]
 ```
 
 Run `hblank COMMAND --help` for the help text installed with your version.
@@ -190,6 +191,46 @@ hblank test --filter button_disabled_uses_muted_style
 Cargo still owns test discovery, output, and exit status.
 
 Read [Testing components](testing.md) for `#[gpui::test]`, typed render handles, and drawing helpers.
+
+## `hblank update`
+
+```text
+hblank update [--project PATH] [--version VERSION]
+```
+
+Stop any running `hblank dev` process before updating. The command:
+
+1. Checks the initialized project's host, preview, and owning workspace manifests without changing files.
+2. Selects the newest stable, unyanked version published for all four Hblank crates.
+3. Pins existing Hblank-family dependency declarations to that exact version, including renamed, target-specific, and workspace-inherited dependencies. It preserves comments, features, and other dependency options; it does not add a host dependency if none exists.
+4. Refreshes the host/workspace and private preview lockfiles with Cargo, without broadly unlocking unrelated dependencies.
+5. Installs the matching `hblank-cli` release through `cargo install --locked`. An already installed matching crates.io CLI is kept.
+
+```bash
+hblank update
+hblank update --project crates/ui
+hblank update --version 0.6.0
+```
+
+`--version` accepts an exact published version, without `v`, `=`, or a version range. Explicit prereleases are allowed if all four crates are published and unyanked. Without this flag, prereleases are excluded. Version discovery requires network access to the crates.io sparse index.
+
+The host and preview remain on the same release. Workspace-inherited declarations are edited at their owner, affecting other members that share those declarations. Unused workspace declarations are not changed. Review and commit changed manifests and tracked lockfiles.
+
+### Unsupported sources and failures
+
+Git/path dependencies, alternate registries, and Hblank `[patch]`/`[replace]` overrides are rejected before writes or CLI installation. Keep those projects on their chosen sources and update them manually. This command does not migrate old fixture APIs or incompatible GPUI backends; see [migration notes](migration-0.3.md) and [GPUI compatibility](crates.md).
+
+If a write or Cargo command fails after changes begin, the updater attempts to restore the original manifests and lockfiles, including removing newly created lockfiles. CLI installation runs last. Any restoration failure is reported alongside the original error; inspect those paths before retrying. Do not edit manifests or run another updater concurrently.
+
+CLI installation follows Cargo's normal installation location and permissions, including `CARGO_INSTALL_ROOT`. A system-package-managed CLI should be updated through its package manager instead; installing a Cargo copy does not replace a binary elsewhere on `PATH`.
+
+The updater does not regenerate fixtures, run tests, launch the preview, or rerun `init`. Finish with:
+
+```bash
+hblank --version
+hblank test
+hblank dev
+```
 
 ## Configuration errors
 

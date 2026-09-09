@@ -25,12 +25,16 @@ inventory = "0.3.21"
 notify = "8.2.0"
 proc-macro2 = "1.0.103"
 quote = "1.0.42"
+semver = "1.0.28"
 serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.151"
 syn = { version = "2.0.111", features = ["full", "extra-traits"] }
 tempfile = "3.23.0"
 thiserror = "2.0.17"
 toml = "0.9.8"
+toml_edit = "0.22.27"
 unicode-segmentation = "1.13.3"
+ureq = "3"
 walkdir = "2.5.0"
 
 [workspace.lints.rust]

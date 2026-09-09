@@ -5,6 +5,7 @@ mod discovery;
 mod generate;
 mod init;
 mod test;
+mod update;
 pub use catalog::{CatalogError, CatalogOptions, run_list};
 pub(crate) use catalog::{build_preview, fixture_ids, preview_binary};
 pub use config::{CONFIG_PATH, Config, ConfigError, WindowConfig};
@@ -16,3 +17,4 @@ pub use generate::{
 };
 pub use init::{InitError, InitOptions, InitReport, initialize};
 pub use test::{TestError, TestOptions, run_tests};
+pub use update::{UpdateError, UpdateOptions, UpdateReport, run_update};

@@ -31,6 +31,10 @@ Always confirm these with the checked-out repository; use code truth if a later 
 
 The host package remains the source of production components. The preview crate depends on both `hblank` and the host package under the alias `hblank_project`. Cargo later creates `.hblank/target/`; runtime state lives at `.hblank/state.toml`. Both are ignored by the generated `.hblank/.gitignore`.
 
+## Updating an existing project
+
+Stop `hblank dev`, then use `hblank update --project PATH` for crates.io installations. The updater aligns the Cargo-installed CLI, existing host/preview Hblank dependencies (including inherited workspace entries), and lockfiles to one fully published stable release. `--version VERSION` selects an exact release. Features and comments are preserved; reported failures restore manifests and lockfiles where possible. Git/path/alternate-registry and Hblank source overrides require a manual update, not conversion. Do not rerun `init`; run `hblank test`, then restart `hblank dev`. See the [CLI reference](../../../docs/cli.md#hblank-update).
+
 ## GPUI backend
 
 `hblank-core` has no GPUI dependency. The `hblank` adapter uses GPUI 0.2.2 from crates.io and re-exports it as `hblank::gpui`. Fixture files should import GPUI through `hblank::gpui`.
