@@ -45,6 +45,25 @@ hblank dev
 
 Read [Getting started](docs/getting-started.md) to add the first fixture to an existing project.
 
+## Updating hblank
+
+Update the **CLI and both runtime dependencies**: your host package's `Cargo.toml` and its separate `.hblank/Cargo.toml`. Updating the CLI alone does not update the UI.
+
+Stop `hblank dev`, choose a [published release](https://github.com/mmmeff/hblank/releases), and replace `VERSION` below with its version number (without `v`). Run from the package containing `.hblank/`:
+
+```bash
+cargo install hblank-cli --version '=VERSION' --locked
+cargo add 'hblank@=VERSION'
+cargo add --manifest-path .hblank/Cargo.toml 'hblank@=VERSION' --features test-support
+hblank --version
+hblank test
+hblank dev
+```
+
+For workspace-inherited dependencies, update the owning `[workspace.dependencies]` entry too. Keep both runtime dependencies on the same version **and source**, preserve project-specific features, and commit the changed manifests and tracked lockfiles. `cargo update` alone cannot change exact pins or escape a manifest's version range (for example, `"0.5"` does not allow `0.6`). Do not rerun `hblank init`; it refuses to overwrite existing setup. Check [migration notes](docs/migration-0.3.md) and [GPUI compatibility](docs/crates.md) when upgrading older projects.
+
+**Using unreleased changes:** a Git push is not a crates.io release. Either wait for publishing or point both runtime dependencies at the same Git revision/local checkout. For Git, update both `rev` pins and refresh both lockfiles with `cargo update -p hblank` and `cargo update --manifest-path .hblank/Cargo.toml -p hblank` (these also update tracked branches). Reinstall the CLI with `cargo install --git https://github.com/mmmeff/hblank --rev REV hblank-cli --locked --force`. For local `path` dependencies, pull the checkout and reinstall with `cargo install --path /path/to/hblank/crates/hblank-cli --locked --force`. Restart `hblank dev` to rebuild; no reinitialization is needed.
+
 ## Define the states that matter
 
 Hblank turns ordinary Rust props into controls:
