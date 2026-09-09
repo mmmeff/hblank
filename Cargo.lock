@@ -2527,7 +2527,7 @@ checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 
 [[package]]
 name = "hblank"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "gpui",
  "hblank-core",
@@ -2540,7 +2540,7 @@ dependencies = [
 
 [[package]]
 name = "hblank-cli"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2559,7 +2559,7 @@ dependencies = [
 
 [[package]]
 name = "hblank-core"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "serde",
  "thiserror 2.0.20",
@@ -2567,7 +2567,7 @@ dependencies = [
 
 [[package]]
 name = "hblank-dogfood"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "gpui",
  "hblank",
@@ -2575,7 +2575,7 @@ dependencies = [
 
 [[package]]
 name = "hblank-macros"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "proc-macro2",
  "quote",

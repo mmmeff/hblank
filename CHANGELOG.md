@@ -1,3 +1,10 @@
+# [0.7.0](https://github.com/mmmeff/hblank/compare/v0.6.0...v0.7.0) (2026-09-09)
+
+
+### Features
+
+* **cli:** add coordinated hblank update command ([86ced8e](https://github.com/mmmeff/hblank/commit/86ced8e0a1103e683e44bc28fb790a28b935644a))
+
 ## Unreleased
 
 ### Features
